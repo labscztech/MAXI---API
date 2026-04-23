@@ -50,14 +50,28 @@ server {
     listen 80;
     server_name zanontech.com www.zanontech.com;
 
-    location / {
-        proxy_pass http://127.0.0.1:8000;
+    # Recebe o acesso pelo /fusion e roda a página raiz do App
+    location /fusion/ {
+        proxy_pass http://127.0.0.1:8000/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+    }
 
-        # Suporte a WebSockets
+    # Arquivos estáticos chamados pelo HTML da porta 8000
+    location /static/ {
+        proxy_pass http://127.0.0.1:8000/static/;
+    }
+
+    # Endpoints de API chamados pelo Dashboard
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000/api/;
+    }
+
+    # Suporte a WebSockets
+    location /ws {
+        proxy_pass http://127.0.0.1:8000/ws;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
