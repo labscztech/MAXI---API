@@ -1,0 +1,47 @@
+name: Deploy MAXI to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Copy repository contents via scp
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USER }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: 22
+          source: "."
+          target: "/root/projetos/MAXI"
+          rm: true
+
+      - name: Install dependencies and Restart PM2
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USER }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: 22
+          script: |
+            cd /root/projetos/MAXI/dashboard
+            
+            # Criar Virtual Environment se não existir
+            if [ ! -d "venv" ]; then
+              python3 -m venv venv
+            fi
+            
+            # Ativar venv e instalar dependências
+            source venv/bin/activate
+            pip install -r requirements.txt
+            
+            # Reiniciar ou Iniciar o serviço PM2
+            pm2 restart maxi-dashboard || pm2 start "uvicorn main:app --host 127.0.0.1 --port 8000" --name "maxi-dashboard" --interpreter ./venv/bin/python
+            pm2 save
