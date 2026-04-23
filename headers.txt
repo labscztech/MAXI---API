@@ -1,0 +1,11 @@
+HTTP/1.1 200 OK
+Date: Thu, 16 Apr 2026 14:27:52 GMT
+Server: Apache/2.4.41 (Ubuntu)
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Set-Cookie: PHPSESSID_=bmV0bWFrZT82OGYxMjJmOGU5OTY4NzBl; expires=Fri, 17-Apr-2026 14:27:52 GMT; Max-Age=86400
+Vary: Accept-Encoding
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
