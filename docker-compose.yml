@@ -12,8 +12,11 @@ services:
       - ./pedidos.json:/pedidos.json
     labels:
       - "traefik.enable=true"
-      # Avisa o Traefik para aceitar visitas via zanontech.com E com as rotas que nosso app tem
-      - "traefik.http.routers.maxi-dashboard.rule=Host(`zanontech.com`) && (PathPrefix(`/fusion/`) || PathPrefix(`/api/`) || PathPrefix(`/static/`) || PathPrefix(`/ws`))"
+      # Avisa o Traefik para aceitar visitas via zanontech.com E com as rotas que nosso app tem (sem precisar da barra final)
+      - "traefik.http.routers.maxi-dashboard.rule=Host(`zanontech.com`) && (PathPrefix(`/fusion`) || PathPrefix(`/api`) || PathPrefix(`/static`) || PathPrefix(`/ws`))"
+      # Força o reconhecimento pela porta HTTP normal e HTTPS seguro
+      - "traefik.http.routers.maxi-dashboard.entrypoints=web,websecure"
+      - "traefik.http.routers.maxi-dashboard.tls=true"
       # Mapeia nativamente para a porta 8000 exposta pelo app Python interno
       - "traefik.http.services.maxi-dashboard.loadbalancer.server.port=8000"
     networks:
