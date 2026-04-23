@@ -31,17 +31,11 @@ jobs:
           key: ${{ secrets.HOSTINGER_SSH_KEY }}
           port: 22
           script: |
-            cd /root/projetos/MAXI/dashboard
+            cd /root/projetos/MAXI
             
-            # Criar Virtual Environment se não existir
-            if [ ! -d "venv" ]; then
-              python3 -m venv venv
-            fi
+            # Garante que as pastas de banco de dados e arquivos existam
+            mkdir -p dashboard/data
+            touch output.html pedidos.json
             
-            # Ativar venv e instalar dependências
-            source venv/bin/activate
-            pip install -r requirements.txt
-            
-            # Reiniciar ou Iniciar o serviço PM2
-            pm2 restart maxi-dashboard || pm2 start "uvicorn main:app --host 127.0.0.1 --port 8000" --name "maxi-dashboard" --interpreter ./venv/bin/python
-            pm2 save
+            # Recria a imagem com novos logs e sobe a aplicação linkada ao Traefik
+            docker-compose up -d --build

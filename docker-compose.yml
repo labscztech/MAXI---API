@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  maxi-dashboard:
+    build:
+      context: ./dashboard
+    container_name: maxi-dashboard
+    restart: always
+    volumes:
+      - ./dashboard/data:/app/data
+      - ./output.html:/output.html
+      - ./pedidos.json:/pedidos.json
+    labels:
+      - "traefik.enable=true"
+      # Avisa o Traefik para aceitar visitas via zanontech.com E com as rotas que nosso app tem
+      - "traefik.http.routers.maxi-dashboard.rule=Host(`zanontech.com`) && (PathPrefix(`/fusion/`) || PathPrefix(`/api/`) || PathPrefix(`/static/`) || PathPrefix(`/ws`))"
+      # Mapeia nativamente para a porta 8000 exposta pelo app Python interno
+      - "traefik.http.services.maxi-dashboard.loadbalancer.server.port=8000"
+    networks:
+      - root_default
+
+networks:
+  # Conecta à mesma rede virtual criada para o Traefik/n8n da Hostinger
+  root_default:
+    external: true
