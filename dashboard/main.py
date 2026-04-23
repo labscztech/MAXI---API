@@ -217,3 +217,9 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 @app.get("/")
 def serve_frontend():
     return FileResponse(str(static_dir / "index.html"))
+
+
+@app.get("/scanner")
+def serve_scanner():
+    """Tela simplificada de bipagem para operadores de produção."""
+    return FileResponse(str(static_dir / "scanner.html"))

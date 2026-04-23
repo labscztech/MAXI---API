@@ -13,7 +13,7 @@ services:
     labels:
       - "traefik.enable=true"
       # Avisa o Traefik para aceitar visitas via zanontech.com E com as rotas que nosso app tem
-      - "traefik.http.routers.maxi-dashboard.rule=Host(`zanontech.com`) && (PathPrefix(`/fusion`) || PathPrefix(`/api`) || PathPrefix(`/static`) || PathPrefix(`/ws`))"
+      - "traefik.http.routers.maxi-dashboard.rule=Host(`zanontech.com`) && (PathPrefix(`/fusion`) || PathPrefix(`/scanner`) || PathPrefix(`/api`) || PathPrefix(`/static`) || PathPrefix(`/ws`))"
       # Força o reconhecimento pela porta HTTP normal e HTTPS seguro, puxando o gerador SSL válido da Hostinger (mytlschallenge)
       - "traefik.http.routers.maxi-dashboard.entrypoints=web,websecure"
       - "traefik.http.routers.maxi-dashboard.tls=true"

@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fusion — Scanner de Produção</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #060d1a;
+      --surface: #0f1d30;
+      --surface2: #162438;
+      --border: #1e3550;
+      --text: #e8f1ff;
+      --muted: #5a7a9e;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59,130,246,0.3);
+      --green: #22c55e;
+      --green-glow: rgba(34,197,94,0.25);
+      --red: #ef4444;
+      --red-glow: rgba(239,68,68,0.25);
+      --yellow: #f59e0b;
+      --radius: 16px;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    /* BG animated gradient */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(59,130,246,0.12) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #app {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* ── Header ───────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(15,29,48,0.8);
+      backdrop-filter: blur(12px);
+      flex-shrink: 0;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .logo-text {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-text span { color: var(--accent); }
+
+    .ws-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .ws-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.3s;
+    }
+    .ws-dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+    /* ── Main layout ──────────────────────────── */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 32px 20px;
+      overflow-y: auto;
+      gap: 24px;
+    }
+
+    /* ── Scanner card ─────────────────────────── */
+    .scanner-card {
+      width: 100%;
+      max-width: 520px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      box-shadow: 0 0 60px rgba(59,130,246,0.06);
+    }
+
+    .scanner-animation {
+      position: relative;
+      width: 80px;
+      height: 80px;
+    }
+
+    .scanner-animation svg {
+      width: 80px;
+      height: 80px;
+      color: var(--accent);
+    }
+
+    .scanner-ring {
+      position: absolute;
+      inset: -6px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      border-top-color: var(--accent);
+      animation: spin 1.5s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .scanner-ring.ready {
+      border-top-color: var(--green);
+      animation: none;
+      border: 2px solid var(--green);
+      box-shadow: 0 0 16px var(--green-glow);
+    }
+
+    .scanner-title {
+      text-align: center;
+    }
+
+    .scanner-title h2 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .scanner-title p {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .barcode-field {
+      position: relative;
+      width: 100%;
+    }
+
+    .barcode-field input {
+      width: 100%;
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 16px 52px 16px 20px;
+      font-size: 22px;
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .barcode-field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-glow);
+    }
+
+    .barcode-field input::placeholder {
+      font-size: 13px;
+      letter-spacing: 0;
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    .barcode-field .clear-btn {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      color: var(--muted);
+      font-size: 18px;
+      padding: 4px;
+      border: none;
+      cursor: pointer;
+      display: none;
+    }
+
+    .barcode-field .clear-btn:hover { color: var(--text); }
+
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    kbd {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 1px 6px;
+      font-family: monospace;
+      font-size: 11px;
+      color: var(--text);
+    }
+
+    /* ── Result card ──────────────────────────── */
+    .result-card {
+      width: 100%;
+      max-width: 520px;
+      animation: fadeUp 0.25s ease;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Estado: não encontrado */
+    .not-found {
+      background: rgba(239,68,68,0.06);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: var(--radius);
+      padding: 24px;
+      text-align: center;
+    }
+
+    .not-found .icon { font-size: 40px; margin-bottom: 10px; }
+    .not-found h3 { font-size: 16px; font-weight: 600; color: var(--red); }
+    .not-found p  { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    /* Estado: encontrado */
+    .found-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .found-header {
+      background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(99,102,241,0.08));
+      border-bottom: 1px solid var(--border);
+      padding: 20px 24px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .op-badge {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      background: rgba(59,130,246,0.12);
+      border: 1px solid rgba(59,130,246,0.25);
+      border-radius: 8px;
+      padding: 3px 10px;
+      font-family: monospace;
+      letter-spacing: 1px;
+    }
+
+    .found-header h3 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-top: 8px;
+      line-height: 1.3;
+    }
+
+    .status-badge {
+      flex-shrink: 0;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(59,130,246,0.15);
+      color: #93c5fd;
+      border: 1px solid rgba(59,130,246,0.25);
+    }
+
+    .found-body {
+      padding: 24px;
+    }
+
+    .substatus-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 14px;
+    }
+
+    .substatus-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .sub-btn {
+      padding: 11px 14px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 500;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+
+    .sub-btn:hover { background: var(--border); border-color: var(--muted); }
+
+    .sub-btn.selected {
+      border-color: currentColor;
+      background: rgba(0,0,0,0.2);
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.05);
+    }
+
+    .sub-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .save-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+
+    .save-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .save-btn.success {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+    }
+
+    /* ── Toast ────────────────────────────────── */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      z-index: 999;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 8px 32px #0004;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: toastIn 0.2s ease;
+      white-space: nowrap;
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(8px) scale(0.96); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .toast.success { border-left: 4px solid var(--green); }
+    .toast.error   { border-left: 4px solid var(--red); }
+
+    /* ── Clear btn ────────────────────────────── */
+    .scan-again-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      max-width: 520px;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .scan-again-btn:hover { background: var(--surface); color: var(--text); }
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">📡</div>
+      <div class="logo-text">Scanner <span>FUSION</span></div>
+    </div>
+    <div class="ws-badge">
+      <div class="ws-dot" id="ws-dot"></div>
+      <span id="ws-label">Conectando...</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="scanner-card" id="scanner-card">
+      <div class="scanner-animation">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5zM6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
+        </svg>
+        <div class="scanner-ring" id="scanner-ring"></div>
+      </div>
+
+      <div class="scanner-title">
+        <h2>Bipar Vidro</h2>
+        <p>Aponte o leitor de código de barras ou digite a OP</p>
+      </div>
+
+      <div class="barcode-field">
+        <input
+          id="barcode-input"
+          type="text"
+          placeholder="Aguardando leitura..."
+          autocomplete="off"
+          autofocus
+          inputmode="numeric"
+        />
+        <button class="clear-btn" id="clear-btn" onclick="clearInput()">✕</button>
+      </div>
+
+      <p class="hint">
+        O campo está sempre pronto para o scanner.<br/>
+        Pressione <kbd>Enter</kbd> ou aguarde 600ms após digitar.
+      </p>
+    </div>
+
+    <!-- Resultado aparece aqui -->
+    <div id="result-area"></div>
+
+    <button class="scan-again-btn" id="scan-again-btn" style="display:none" onclick="resetScanner()">
+      ↩ Bipar outro vidro
+    </button>
+  </main>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+  /* ── State ────────────────────────────────────── */
+  let substatuses = [];
+  let currentOrder = null;
+  let selectedSubstatusId = null;
+  let scanDebounce = null;
+  let ws = null;
+
+  /* ── Boot ─────────────────────────────────────── */
+  async function boot() {
+    substatuses = await api('/api/substatuses');
+    connectWS();
+    setupInput();
+  }
+
+  /* ── API ──────────────────────────────────────── */
+  async function api(path, opts = {}) {
+    const r = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...opts });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+    return r.json();
+  }
+
+  /* ── WebSocket ────────────────────────────────── */
+  function connectWS() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${proto}://${location.host}/ws`);
+    ws.onopen = () => {
+      document.getElementById('ws-dot').classList.add('on');
+      document.getElementById('ws-label').textContent = 'Online';
+    };
+    ws.onclose = () => {
+      document.getElementById('ws-dot').classList.remove('on');
+      document.getElementById('ws-label').textContent = 'Reconectando...';
+      setTimeout(connectWS, 3000);
+    };
+    setInterval(() => { if (ws?.readyState === 1) ws.send('ping'); }, 25000);
+  }
+
+  /* ── Input setup ──────────────────────────────── */
+  function setupInput() {
+    const input = document.getElementById('barcode-input');
+    const clearBtn = document.getElementById('clear-btn');
+
+    input.addEventListener('input', () => {
+      clearBtn.style.display = input.value ? 'block' : 'none';
+      clearTimeout(scanDebounce);
+      scanDebounce = setTimeout(processBarcode, 600);
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        clearTimeout(scanDebounce);
+        processBarcode();
+      }
+      if (e.key === 'Escape') clearInput();
+    });
+
+    // Manter o foco sempre no input
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('button') || e.target.id === 'clear-btn') {
+        setTimeout(() => input.focus(), 50);
+      }
+    });
+  }
+
+  function clearInput() {
+    const input = document.getElementById('barcode-input');
+    input.value = '';
+    document.getElementById('clear-btn').style.display = 'none';
+    clearTimeout(scanDebounce);
+    input.focus();
+  }
+
+  /* ── Processar código ─────────────────────────── */
+  async function processBarcode() {
+    const code = document.getElementById('barcode-input').value.trim();
+    if (!code || code.length < 2) return;
+
+    const ring = document.getElementById('scanner-ring');
+    ring.classList.remove('ready');
+
+    try {
+      const data = await api(`/api/scan/${encodeURIComponent(code)}`);
+
+      if (!data.found) {
+        showNotFound(code);
+        return;
+      }
+
+      ring.classList.add('ready');
+      showFound(data.order);
+
+    } catch (err) {
+      toast('Erro ao buscar: ' + err.message, 'error');
+    }
+  }
+
+  /* ── Mostrar resultado ────────────────────────── */
+  function showNotFound(code) {
+    currentOrder = null;
+    document.getElementById('result-area').innerHTML = `
+      <div class="result-card">
+        <div class="not-found">
+          <div class="icon">🔍</div>
+          <h3>OP não encontrada</h3>
+          <p>Nenhum registro com o código <b>${escHtml(code)}</b></p>
+        </div>
+      </div>`;
+    document.getElementById('scan-again-btn').style.display = 'flex';
+    document.getElementById('scanner-ring').classList.remove('ready');
+  }
+
+  function showFound(order) {
+    currentOrder = order;
+    selectedSubstatusId = order.substatus_id ?? null;
+
+    const situacaoLabel = shortSit(order.situacao);
+    const nomeCliente = order.fantasia || order.razao_social || '—';
+    const inProd = order.situacao?.includes('Em Produ');
+
+    const subHtml = inProd ? buildSubstatusGrid() : `
+      <p style="color:var(--muted);font-size:13px;text-align:center;padding:12px 0">
+        Sub-status disponível apenas para itens Em Produção.
+      </p>`;
+
+    document.getElementById('result-area').innerHTML = `
+      <div class="result-card">
+        <div class="found-card">
+          <div class="found-header">
+            <div>
+              <div class="op-badge">${escHtml(order.op)}</div>
+              <h3>${escHtml(nomeCliente)}</h3>
+            </div>
+            <div class="status-badge">${escHtml(situacaoLabel)}</div>
+          </div>
+          <div class="found-body">
+            <div class="substatus-title">Atualizar Sub-Status</div>
+            <div class="substatus-grid" id="substatus-grid">${subHtml}</div>
+            ${inProd ? `<button class="save-btn" id="save-btn" onclick="saveSubstatus()">Salvar Sub-Status</button>` : ''}
+          </div>
+        </div>
+      </div>`;
+
+    document.getElementById('scan-again-btn').style.display = 'flex';
+  }
+
+  function buildSubstatusGrid() {
+    const btns = substatuses.map(s => {
+      const active = selectedSubstatusId === s.id ? 'selected' : '';
+      return `<button class="sub-btn ${active}" style="color:${s.cor}" onclick="selectSub(${s.id})" id="sub-${s.id}">
+        <span class="sub-dot" style="background:${s.cor}"></span>
+        <span>${escHtml(s.nome)}</span>
+      </button>`;
+    });
+
+    const nullActive = selectedSubstatusId === null ? 'selected' : '';
+    btns.push(`<button class="sub-btn ${nullActive}" style="color:var(--muted)" onclick="selectSub(null)" id="sub-null">
+      <span class="sub-dot" style="background:var(--muted)"></span>
+      <span>Sem sub-status</span>
+    </button>`);
+
+    return btns.join('');
+  }
+
+  function selectSub(id) {
+    selectedSubstatusId = id;
+    // Atualiza visual de todos os botões
+    substatuses.forEach(s => {
+      const btn = document.getElementById(`sub-${s.id}`);
+      if (btn) btn.classList.toggle('selected', s.id === id);
+    });
+    const nullBtn = document.getElementById('sub-null');
+    if (nullBtn) nullBtn.classList.toggle('selected', id === null);
+  }
+
+  async function saveSubstatus() {
+    if (!currentOrder) return;
+    const btn = document.getElementById('save-btn');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+
+    try {
+      await api(`/api/orders/${encodeURIComponent(currentOrder.op)}/substatus`, {
+        method: 'PUT',
+        body: JSON.stringify({ substatus_id: selectedSubstatusId, scanner_input: currentOrder.op }),
+      });
+
+      btn.textContent = '✓ Salvo!';
+      btn.classList.add('success');
+      toast('Sub-status atualizado com sucesso!', 'success');
+
+      // Auto-reset após 1.8s
+      setTimeout(() => resetScanner(), 1800);
+
+    } catch (err) {
+      toast('Erro ao salvar: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Salvar Sub-Status';
+    }
+  }
+
+  /* ── Reset ────────────────────────────────────── */
+  function resetScanner() {
+    currentOrder = null;
+    selectedSubstatusId = null;
+    document.getElementById('result-area').innerHTML = '';
+    document.getElementById('scan-again-btn').style.display = 'none';
+    document.getElementById('scanner-ring').classList.remove('ready');
+    clearInput();
+  }
+
+  /* ── Helpers ──────────────────────────────────── */
+  function escHtml(s = '') {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function shortSit(s = '') {
+    return s.replace('Pedido - ', '') || s;
+  }
+
+  function toast(msg, type = 'info') {
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.textContent = msg;
+    document.getElementById('toast-container').appendChild(el);
+    setTimeout(() => el.remove(), 3200);
+  }
+
+  /* ── Start ────────────────────────────────────── */
+  boot();
+</script>
+</body>
+</html>
