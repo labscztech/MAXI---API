@@ -21,8 +21,9 @@
       --green: #22c55e;
       --green-glow: rgba(34,197,94,0.25);
       --red: #ef4444;
-      --red-glow: rgba(239,68,68,0.25);
       --yellow: #f59e0b;
+      --setor-color: #3b82f6;
+      --setor-glow: rgba(59,130,246,0.25);
       --radius: 16px;
     }
 
@@ -34,14 +35,14 @@
       overflow: hidden;
     }
 
-    /* BG animated gradient */
     body::before {
       content: '';
       position: fixed;
       inset: 0;
-      background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(59,130,246,0.12) 0%, transparent 60%);
+      background: radial-gradient(ellipse 80% 50% at 50% -10%, var(--setor-glow) 0%, transparent 60%);
       pointer-events: none;
       z-index: 0;
+      transition: background 0.5s;
     }
 
     #app {
@@ -52,14 +53,14 @@
       height: 100vh;
     }
 
-    /* ── Header ───────────────────────────────── */
+    /* ── Header ───────────────────────────────────── */
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 16px 24px;
+      padding: 14px 24px;
       border-bottom: 1px solid var(--border);
-      background: rgba(15,29,48,0.8);
+      background: rgba(15,29,48,0.85);
       backdrop-filter: blur(12px);
       flex-shrink: 0;
     }
@@ -67,27 +68,34 @@
     .logo {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
     }
 
     .logo-icon {
-      width: 36px;
-      height: 36px;
-      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--setor-color), #6366f1);
       border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 18px;
+      transition: background 0.5s;
+      box-shadow: 0 0 16px var(--setor-glow);
     }
 
-    .logo-text {
-      font-size: 18px;
+    .header-info h1 {
+      font-size: 16px;
       font-weight: 700;
-      letter-spacing: -0.5px;
+      letter-spacing: -0.3px;
+      line-height: 1;
     }
 
-    .logo-text span { color: var(--accent); }
+    .header-info p {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
 
     .ws-badge {
       display: flex;
@@ -110,92 +118,137 @@
     }
     .ws-dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
 
-    /* ── Main layout ──────────────────────────── */
+    /* ── Main ─────────────────────────────────────── */
     main {
       flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
-      padding: 32px 20px;
+      justify-content: center;
+      padding: 24px 20px;
       overflow-y: auto;
-      gap: 24px;
+      gap: 20px;
     }
 
-    /* ── Scanner card ─────────────────────────── */
+    /* ── Setor badge grande ────────────────────────── */
+    .setor-badge {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 28px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--setor-color);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 520px;
+      box-shadow: -4px 0 20px var(--setor-glow);
+      transition: border-color 0.4s, box-shadow 0.4s;
+    }
+
+    .setor-color-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--setor-color);
+      flex-shrink: 0;
+      box-shadow: 0 0 10px var(--setor-glow);
+      transition: background 0.4s;
+    }
+
+    .setor-info { flex: 1; }
+
+    .setor-info .label {
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .setor-info .nome {
+      font-size: 18px;
+      font-weight: 700;
+      margin-top: 2px;
+      color: var(--setor-color);
+      transition: color 0.4s;
+    }
+
+    .setor-info .desc {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* ── Loading state ─────────────────────────────── */
+    #loading-state {
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    /* ── Scanner card ─────────────────────────────── */
     .scanner-card {
       width: 100%;
       max-width: 520px;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 32px;
+      padding: 28px 28px 24px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 20px;
-      box-shadow: 0 0 60px rgba(59,130,246,0.06);
+      gap: 18px;
     }
 
-    .scanner-animation {
+    .scan-icon-wrap {
       position: relative;
-      width: 80px;
-      height: 80px;
+      width: 72px;
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    .scanner-animation svg {
-      width: 80px;
-      height: 80px;
-      color: var(--accent);
+    .scan-icon-wrap svg {
+      width: 48px;
+      height: 48px;
+      color: var(--setor-color);
+      transition: color 0.4s;
     }
 
-    .scanner-ring {
+    .scan-ring {
       position: absolute;
-      inset: -6px;
+      inset: 0;
       border-radius: 50%;
       border: 2px solid transparent;
-      border-top-color: var(--accent);
+      border-top-color: var(--setor-color);
       animation: spin 1.5s linear infinite;
+      transition: border-color 0.4s;
+    }
+
+    .scan-ring.ready {
+      animation: none;
+      border: 2px solid var(--green);
+      box-shadow: 0 0 14px var(--green-glow);
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .scanner-ring.ready {
-      border-top-color: var(--green);
-      animation: none;
-      border: 2px solid var(--green);
-      box-shadow: 0 0 16px var(--green-glow);
-    }
+    .scan-label { text-align: center; }
+    .scan-label h2 { font-size: 18px; font-weight: 700; }
+    .scan-label p  { font-size: 12px; color: var(--muted); margin-top: 3px; }
 
-    .scanner-title {
-      text-align: center;
-    }
+    .barcode-wrap { position: relative; width: 100%; }
 
-    .scanner-title h2 {
-      font-size: 20px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
-    }
-
-    .scanner-title p {
-      color: var(--muted);
-      font-size: 13px;
-      margin-top: 4px;
-    }
-
-    .barcode-field {
-      position: relative;
-      width: 100%;
-    }
-
-    .barcode-field input {
+    #barcode-input {
       width: 100%;
       background: var(--surface2);
       border: 2px solid var(--border);
       color: var(--text);
       border-radius: 12px;
-      padding: 16px 52px 16px 20px;
-      font-size: 22px;
+      padding: 16px 44px 16px 20px;
+      font-size: 24px;
       font-family: 'Courier New', monospace;
       font-weight: 700;
       letter-spacing: 3px;
@@ -204,33 +257,33 @@
       transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    .barcode-field input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 4px var(--accent-glow);
+    #barcode-input:focus {
+      border-color: var(--setor-color);
+      box-shadow: 0 0 0 4px var(--setor-glow);
     }
 
-    .barcode-field input::placeholder {
+    #barcode-input::placeholder {
       font-size: 13px;
       letter-spacing: 0;
       font-weight: 400;
       color: var(--muted);
     }
 
-    .barcode-field .clear-btn {
+    .clear-btn {
       position: absolute;
       right: 14px;
       top: 50%;
       transform: translateY(-50%);
       background: transparent;
       color: var(--muted);
-      font-size: 18px;
-      padding: 4px;
+      font-size: 16px;
       border: none;
       cursor: pointer;
+      padding: 4px;
       display: none;
     }
 
-    .barcode-field .clear-btn:hover { color: var(--text); }
+    .clear-btn:hover { color: var(--text); }
 
     .hint {
       font-size: 12px;
@@ -240,163 +293,129 @@
     }
 
     kbd {
-      display: inline-block;
       background: var(--surface2);
       border: 1px solid var(--border);
-      border-radius: 5px;
+      border-radius: 4px;
       padding: 1px 6px;
       font-family: monospace;
       font-size: 11px;
-      color: var(--text);
     }
 
-    /* ── Result card ──────────────────────────── */
-    .result-card {
+    /* ── Feedback card ─────────────────────────────── */
+    .feedback-card {
       width: 100%;
       max-width: 520px;
-      animation: fadeUp 0.25s ease;
+      border-radius: var(--radius);
+      overflow: hidden;
+      animation: fadeUp 0.2s ease;
     }
 
     @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(12px); }
+      from { opacity: 0; transform: translateY(10px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* Estado: não encontrado */
-    .not-found {
+    .feedback-success {
+      background: rgba(34,197,94,0.06);
+      border: 1px solid rgba(34,197,94,0.3);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .feedback-success .check {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(34,197,94,0.15);
+      border: 2px solid var(--green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .feedback-success .info h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    .feedback-success .info p {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .feedback-error {
       background: rgba(239,68,68,0.06);
       border: 1px solid rgba(239,68,68,0.3);
-      border-radius: var(--radius);
-      padding: 24px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .feedback-error .x-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(239,68,68,0.1);
+      border: 2px solid var(--red);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .feedback-error .info h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--red);
+    }
+
+    .feedback-error .info p {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* ── Contador de bips ──────────────────────────── */
+    .counter-strip {
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .counter-card {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
       text-align: center;
     }
 
-    .not-found .icon { font-size: 40px; margin-bottom: 10px; }
-    .not-found h3 { font-size: 16px; font-weight: 600; color: var(--red); }
-    .not-found p  { font-size: 13px; color: var(--muted); margin-top: 4px; }
-
-    /* Estado: encontrado */
-    .found-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-
-    .found-header {
-      background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(99,102,241,0.08));
-      border-bottom: 1px solid var(--border);
-      padding: 20px 24px;
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .op-badge {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--accent);
-      background: rgba(59,130,246,0.12);
-      border: 1px solid rgba(59,130,246,0.25);
-      border-radius: 8px;
-      padding: 3px 10px;
-      font-family: monospace;
-      letter-spacing: 1px;
-    }
-
-    .found-header h3 {
-      font-size: 17px;
-      font-weight: 700;
-      margin-top: 8px;
-      line-height: 1.3;
-    }
-
-    .status-badge {
-      flex-shrink: 0;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      background: rgba(59,130,246,0.15);
-      color: #93c5fd;
-      border: 1px solid rgba(59,130,246,0.25);
-    }
-
-    .found-body {
-      padding: 24px;
-    }
-
-    .substatus-title {
-      font-size: 11px;
-      font-weight: 600;
+    .counter-card .c-label {
+      font-size: 10px;
       color: var(--muted);
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 14px;
-    }
-
-    .substatus-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 20px;
-    }
-
-    .sub-btn {
-      padding: 11px 14px;
-      border-radius: 10px;
-      border: 2px solid var(--border);
-      background: var(--surface2);
-      color: var(--text);
-      font-size: 13px;
-      font-weight: 500;
-      text-align: left;
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      cursor: pointer;
-      transition: all 0.15s;
-      font-family: inherit;
-    }
-
-    .sub-btn:hover { background: var(--border); border-color: var(--muted); }
-
-    .sub-btn.selected {
-      border-color: currentColor;
-      background: rgba(0,0,0,0.2);
-      box-shadow: 0 0 0 3px rgba(255,255,255,0.05);
-    }
-
-    .sub-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .save-btn {
-      width: 100%;
-      padding: 14px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, #3b82f6, #6366f1);
-      color: #fff;
-      font-size: 15px;
+      letter-spacing: 0.06em;
       font-weight: 600;
-      border: none;
-      cursor: pointer;
-      font-family: inherit;
-      transition: opacity 0.15s, transform 0.1s;
     }
 
-    .save-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
-    .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .save-btn.success {
-      background: linear-gradient(135deg, #22c55e, #16a34a);
+    .counter-card .c-value {
+      font-size: 28px;
+      font-weight: 900;
+      margin-top: 2px;
+      line-height: 1;
     }
 
-    /* ── Toast ────────────────────────────────── */
+    /* ── Toast ─────────────────────────────────────── */
     #toast-container {
       position: fixed;
       bottom: 24px;
@@ -426,41 +445,41 @@
     }
 
     @keyframes toastIn {
-      from { opacity: 0; transform: translateY(8px) scale(0.96); }
-      to   { opacity: 1; transform: translateY(0) scale(1); }
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
     .toast.success { border-left: 4px solid var(--green); }
     .toast.error   { border-left: 4px solid var(--red); }
 
-    /* ── Clear btn ────────────────────────────── */
-    .scan-again-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      width: 100%;
-      max-width: 520px;
-      padding: 12px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: transparent;
+    /* ── Sem setor — fallback ──────────────────────── */
+    #no-setor-msg {
+      display: none;
+      text-align: center;
+      padding: 40px 20px;
       color: var(--muted);
-      font-size: 13px;
-      font-family: inherit;
-      cursor: pointer;
-      transition: all 0.15s;
     }
 
-    .scan-again-btn:hover { background: var(--surface); color: var(--text); }
+    #no-setor-msg h2 { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    #no-setor-msg p  { font-size: 14px; line-height: 1.7; }
+    #no-setor-msg code {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 13px;
+    }
   </style>
 </head>
 <body>
 <div id="app">
   <header>
     <div class="logo">
-      <div class="logo-icon">📡</div>
-      <div class="logo-text">Scanner <span>FUSION</span></div>
+      <div class="logo-icon" id="logo-icon">📡</div>
+      <div class="header-info">
+        <h1 id="header-title">Scanner FUSION</h1>
+        <p id="header-sub">Carregando setor...</p>
+      </div>
     </div>
     <div class="ws-badge">
       <div class="ws-dot" id="ws-dot"></div>
@@ -468,76 +487,273 @@
     </div>
   </header>
 
-  <main>
-    <div class="scanner-card" id="scanner-card">
-      <div class="scanner-animation">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5zM6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
-        </svg>
-        <div class="scanner-ring" id="scanner-ring"></div>
-      </div>
-
-      <div class="scanner-title">
-        <h2>Bipar Vidro</h2>
-        <p>Aponte o leitor de código de barras ou digite a OP</p>
-      </div>
-
-      <div class="barcode-field">
-        <input
-          id="barcode-input"
-          type="text"
-          placeholder="Aguardando leitura..."
-          autocomplete="off"
-          autofocus
-          inputmode="numeric"
-        />
-        <button class="clear-btn" id="clear-btn" onclick="clearInput()">✕</button>
-      </div>
-
-      <p class="hint">
-        O campo está sempre pronto para o scanner.<br/>
-        Pressione <kbd>Enter</kbd> ou aguarde 600ms após digitar.
-      </p>
-    </div>
-
-    <!-- Resultado aparece aqui -->
-    <div id="result-area"></div>
-
-    <button class="scan-again-btn" id="scan-again-btn" style="display:none" onclick="resetScanner()">
-      ↩ Bipar outro vidro
-    </button>
+  <main id="main-content">
+    <div id="loading-state">Carregando configuração do setor...</div>
   </main>
 </div>
 
 <div id="toast-container"></div>
 
 <script>
-  /* ── State ────────────────────────────────────── */
-  let substatuses = [];
-  let currentOrder = null;
-  let selectedSubstatusId = null;
+  /* ── State ─────────────────────────────────────── */
+  let SETOR = null;           // substatus atual do setor
+  let ALL_SUBSTATUSES = [];   // todos os substatuses
   let scanDebounce = null;
-  let ws = null;
+  let counts = { ok: 0, erro: 0 };
+  let lastResult = null;      // timeout do feedback
 
-  /* ── Boot ─────────────────────────────────────── */
+  /* ── Boot ──────────────────────────────────────── */
   async function boot() {
-    substatuses = await api('/api/substatuses');
+    const params = new URLSearchParams(location.search);
+    const setorId = params.get('setor');
+
     connectWS();
+    ALL_SUBSTATUSES = await api('/api/substatuses');
+
+    if (!setorId) {
+      showNoSetorMsg();
+      return;
+    }
+
+    // Tenta encontrar esse substatus pelo ID
+    const found = ALL_SUBSTATUSES.find(s => String(s.id) === String(setorId));
+
+    if (!found) {
+      showNoSetorMsg(setorId);
+      return;
+    }
+
+    SETOR = found;
+    applySetorTheme(SETOR.cor);
+    renderUI();
+  }
+
+  /* ── Theme dinâmico pela cor do setor ─────────── */
+  function applySetorTheme(cor) {
+    const glow = hexToRgba(cor, 0.25);
+    document.documentElement.style.setProperty('--setor-color', cor);
+    document.documentElement.style.setProperty('--setor-glow', glow);
+    document.documentElement.style.setProperty('--accent', cor);
+    document.documentElement.style.setProperty('--accent-glow', hexToRgba(cor, 0.3));
+  }
+
+  function hexToRgba(hex, alpha) {
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  /* ── Render ────────────────────────────────────── */
+  function renderUI() {
+    // Atualiza header
+    document.getElementById('header-title').textContent = SETOR.nome;
+    document.getElementById('header-sub').textContent = 'Scanner de Produção • FUSION';
+
+    document.getElementById('main-content').innerHTML = `
+      <!-- Setor badge -->
+      <div class="setor-badge">
+        <div class="setor-color-dot" id="setor-dot" style="background:${SETOR.cor}"></div>
+        <div class="setor-info">
+          <div class="label">Setor Ativo</div>
+          <div class="nome">${escHtml(SETOR.nome)}</div>
+          <div class="desc">Todos os bips serão registrados com este sub-status</div>
+        </div>
+      </div>
+
+      <!-- Scanner card -->
+      <div class="scanner-card">
+        <div class="scan-icon-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5zM6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
+          </svg>
+          <div class="scan-ring" id="scan-ring"></div>
+        </div>
+
+        <div class="scan-label">
+          <h2>Aguardando Bip</h2>
+          <p>Aponte o leitor na OP e o sub-status será aplicado automaticamente</p>
+        </div>
+
+        <div class="barcode-wrap">
+          <input id="barcode-input" type="text" placeholder="Aguardando leitura..."
+                 autocomplete="off" autofocus inputmode="numeric" />
+          <button class="clear-btn" id="clear-btn" onclick="clearInput()">✕</button>
+        </div>
+
+        <p class="hint">Campo sempre pronto para o scanner. Pressione <kbd>Enter</kbd> para confirmar.</p>
+      </div>
+
+      <!-- Feedback -->
+      <div id="feedback-area"></div>
+
+      <!-- Contadores da sessão -->
+      <div class="counter-strip">
+        <div class="counter-card">
+          <div class="c-label">✓ Bipados OK</div>
+          <div class="c-value" id="cnt-ok" style="color:var(--green)">0</div>
+        </div>
+        <div class="counter-card">
+          <div class="c-label">✗ Não encontrados</div>
+          <div class="c-value" id="cnt-err" style="color:var(--red)">0</div>
+        </div>
+      </div>`;
+
     setupInput();
   }
 
-  /* ── API ──────────────────────────────────────── */
-  async function api(path, opts = {}) {
-    const r = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...opts });
-    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
-    return r.json();
+  /* ── Input ─────────────────────────────────────── */
+  function setupInput() {
+    const input = document.getElementById('barcode-input');
+    const clearBtn = document.getElementById('clear-btn');
+
+    input.addEventListener('input', () => {
+      clearBtn.style.display = input.value ? 'block' : 'none';
+      clearTimeout(scanDebounce);
+      scanDebounce = setTimeout(processBarcode, 600);
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { clearTimeout(scanDebounce); processBarcode(); }
+      if (e.key === 'Escape') clearInput();
+    });
+
+    // Foco sempre no campo
+    document.addEventListener('click', () => setTimeout(() => input?.focus(), 50));
+    input.focus();
   }
 
-  /* ── WebSocket ────────────────────────────────── */
+  function clearInput() {
+    const input = document.getElementById('barcode-input');
+    if (!input) return;
+    input.value = '';
+    document.getElementById('clear-btn').style.display = 'none';
+    clearTimeout(scanDebounce);
+    input.focus();
+  }
+
+  /* ── Processar bip e auto-aplicar substatus ────── */
+  async function processBarcode() {
+    const input = document.getElementById('barcode-input');
+    if (!input) return;
+    const code = input.value.trim();
+    if (!code || code.length < 2) return;
+
+    const ring = document.getElementById('scan-ring');
+    if (ring) ring.classList.remove('ready');
+
+    try {
+      // 1. Busca o pedido pelo código bipado
+      const scan = await api(`/api/scan/${encodeURIComponent(code)}`);
+
+      if (!scan.found) {
+        counts.erro++;
+        updateCounters();
+        showFeedback('error', code, null);
+        clearInput();
+        return;
+      }
+
+      const order = scan.order;
+
+      // 2. Aplica imediatamente o substatus do setor, sem interação do usuário
+      await api(`/api/orders/${encodeURIComponent(order.op)}/substatus`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          substatus_id: SETOR.id,
+          scanner_input: code,
+        }),
+      });
+
+      counts.ok++;
+      updateCounters();
+      if (ring) ring.classList.add('ready');
+      showFeedback('success', code, order);
+
+    } catch (err) {
+      counts.erro++;
+      updateCounters();
+      showFeedback('error', code, null, err.message);
+    }
+
+    clearInput();
+  }
+
+  /* ── Feedback visual ───────────────────────────── */
+  function showFeedback(type, code, order, errMsg) {
+    clearTimeout(lastResult);
+    const area = document.getElementById('feedback-area');
+    if (!area) return;
+
+    if (type === 'success') {
+      const nome = order.fantasia || order.razao_social || '—';
+      area.innerHTML = `
+        <div class="feedback-card">
+          <div class="feedback-success">
+            <div class="check">✓</div>
+            <div class="info">
+              <h3>OP ${escHtml(order.op)} — ${escHtml(SETOR.nome)}</h3>
+              <p>${escHtml(nome)} &nbsp;·&nbsp; <span style="color:var(--setor-color)">${escHtml(SETOR.nome)}</span> aplicado</p>
+            </div>
+          </div>
+        </div>`;
+    } else {
+      area.innerHTML = `
+        <div class="feedback-card">
+          <div class="feedback-error">
+            <div class="x-icon">✕</div>
+            <div class="info">
+              <h3>OP não encontrada</h3>
+              <p>Código: <b>${escHtml(code)}</b>${errMsg ? ' — ' + escHtml(errMsg) : ''}</p>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    // Fade out após 3s
+    lastResult = setTimeout(() => {
+      if (area) area.innerHTML = '';
+      const ring = document.getElementById('scan-ring');
+      if (ring) ring.classList.remove('ready');
+    }, 3000);
+  }
+
+  function updateCounters() {
+    const ok  = document.getElementById('cnt-ok');
+    const err = document.getElementById('cnt-err');
+    if (ok)  ok.textContent  = counts.ok;
+    if (err) err.textContent = counts.erro;
+  }
+
+  /* ── Sem setor configurado ─────────────────────── */
+  function showNoSetorMsg(id) {
+    const main = document.getElementById('main-content');
+    const lista = ALL_SUBSTATUSES.length
+      ? ALL_SUBSTATUSES.map(s =>
+          `<code style="border-left:3px solid ${s.cor};margin:3px 0;display:block">?setor=${s.id} — ${s.nome}</code>`
+        ).join('')
+      : '';
+
+    main.innerHTML = `
+      <div style="text-align:center;max-width:480px;padding:20px">
+        <div style="font-size:48px;margin-bottom:16px">⚙️</div>
+        <h2 style="font-size:20px;font-weight:700;margin-bottom:10px">Setor não configurado</h2>
+        <p style="color:var(--muted);font-size:14px;line-height:1.7;margin-bottom:20px">
+          ${id ? `O setor <b>${escHtml(id)}</b> não foi encontrado.<br>` : ''}
+          Abra esta página com o parâmetro <code>?setor=ID</code> correspondente ao sub-status do setor.
+        </p>
+        ${lista ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:left">
+          <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:10px">Setores Disponíveis</div>
+          ${lista}
+        </div>` : ''}
+      </div>`;
+  }
+
+  /* ── WebSocket ─────────────────────────────────── */
   function connectWS() {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    ws = new WebSocket(`${proto}://${location.host}/ws`);
+    const ws = new WebSocket(`${proto}://${location.host}/ws`);
     ws.onopen = () => {
       document.getElementById('ws-dot').classList.add('on');
       document.getElementById('ws-label').textContent = 'Online';
@@ -550,188 +766,18 @@
     setInterval(() => { if (ws?.readyState === 1) ws.send('ping'); }, 25000);
   }
 
-  /* ── Input setup ──────────────────────────────── */
-  function setupInput() {
-    const input = document.getElementById('barcode-input');
-    const clearBtn = document.getElementById('clear-btn');
-
-    input.addEventListener('input', () => {
-      clearBtn.style.display = input.value ? 'block' : 'none';
-      clearTimeout(scanDebounce);
-      scanDebounce = setTimeout(processBarcode, 600);
-    });
-
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        clearTimeout(scanDebounce);
-        processBarcode();
-      }
-      if (e.key === 'Escape') clearInput();
-    });
-
-    // Manter o foco sempre no input
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('button') || e.target.id === 'clear-btn') {
-        setTimeout(() => input.focus(), 50);
-      }
-    });
+  /* ── API ───────────────────────────────────────── */
+  async function api(path, opts = {}) {
+    const r = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...opts });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+    return r.json();
   }
 
-  function clearInput() {
-    const input = document.getElementById('barcode-input');
-    input.value = '';
-    document.getElementById('clear-btn').style.display = 'none';
-    clearTimeout(scanDebounce);
-    input.focus();
-  }
-
-  /* ── Processar código ─────────────────────────── */
-  async function processBarcode() {
-    const code = document.getElementById('barcode-input').value.trim();
-    if (!code || code.length < 2) return;
-
-    const ring = document.getElementById('scanner-ring');
-    ring.classList.remove('ready');
-
-    try {
-      const data = await api(`/api/scan/${encodeURIComponent(code)}`);
-
-      if (!data.found) {
-        showNotFound(code);
-        return;
-      }
-
-      ring.classList.add('ready');
-      showFound(data.order);
-
-    } catch (err) {
-      toast('Erro ao buscar: ' + err.message, 'error');
-    }
-  }
-
-  /* ── Mostrar resultado ────────────────────────── */
-  function showNotFound(code) {
-    currentOrder = null;
-    document.getElementById('result-area').innerHTML = `
-      <div class="result-card">
-        <div class="not-found">
-          <div class="icon">🔍</div>
-          <h3>OP não encontrada</h3>
-          <p>Nenhum registro com o código <b>${escHtml(code)}</b></p>
-        </div>
-      </div>`;
-    document.getElementById('scan-again-btn').style.display = 'flex';
-    document.getElementById('scanner-ring').classList.remove('ready');
-  }
-
-  function showFound(order) {
-    currentOrder = order;
-    selectedSubstatusId = order.substatus_id ?? null;
-
-    const situacaoLabel = shortSit(order.situacao);
-    const nomeCliente = order.fantasia || order.razao_social || '—';
-    const inProd = order.situacao?.includes('Em Produ');
-
-    const subHtml = inProd ? buildSubstatusGrid() : `
-      <p style="color:var(--muted);font-size:13px;text-align:center;padding:12px 0">
-        Sub-status disponível apenas para itens Em Produção.
-      </p>`;
-
-    document.getElementById('result-area').innerHTML = `
-      <div class="result-card">
-        <div class="found-card">
-          <div class="found-header">
-            <div>
-              <div class="op-badge">${escHtml(order.op)}</div>
-              <h3>${escHtml(nomeCliente)}</h3>
-            </div>
-            <div class="status-badge">${escHtml(situacaoLabel)}</div>
-          </div>
-          <div class="found-body">
-            <div class="substatus-title">Atualizar Sub-Status</div>
-            <div class="substatus-grid" id="substatus-grid">${subHtml}</div>
-            ${inProd ? `<button class="save-btn" id="save-btn" onclick="saveSubstatus()">Salvar Sub-Status</button>` : ''}
-          </div>
-        </div>
-      </div>`;
-
-    document.getElementById('scan-again-btn').style.display = 'flex';
-  }
-
-  function buildSubstatusGrid() {
-    const btns = substatuses.map(s => {
-      const active = selectedSubstatusId === s.id ? 'selected' : '';
-      return `<button class="sub-btn ${active}" style="color:${s.cor}" onclick="selectSub(${s.id})" id="sub-${s.id}">
-        <span class="sub-dot" style="background:${s.cor}"></span>
-        <span>${escHtml(s.nome)}</span>
-      </button>`;
-    });
-
-    const nullActive = selectedSubstatusId === null ? 'selected' : '';
-    btns.push(`<button class="sub-btn ${nullActive}" style="color:var(--muted)" onclick="selectSub(null)" id="sub-null">
-      <span class="sub-dot" style="background:var(--muted)"></span>
-      <span>Sem sub-status</span>
-    </button>`);
-
-    return btns.join('');
-  }
-
-  function selectSub(id) {
-    selectedSubstatusId = id;
-    // Atualiza visual de todos os botões
-    substatuses.forEach(s => {
-      const btn = document.getElementById(`sub-${s.id}`);
-      if (btn) btn.classList.toggle('selected', s.id === id);
-    });
-    const nullBtn = document.getElementById('sub-null');
-    if (nullBtn) nullBtn.classList.toggle('selected', id === null);
-  }
-
-  async function saveSubstatus() {
-    if (!currentOrder) return;
-    const btn = document.getElementById('save-btn');
-    btn.disabled = true;
-    btn.textContent = 'Salvando...';
-
-    try {
-      await api(`/api/orders/${encodeURIComponent(currentOrder.op)}/substatus`, {
-        method: 'PUT',
-        body: JSON.stringify({ substatus_id: selectedSubstatusId, scanner_input: currentOrder.op }),
-      });
-
-      btn.textContent = '✓ Salvo!';
-      btn.classList.add('success');
-      toast('Sub-status atualizado com sucesso!', 'success');
-
-      // Auto-reset após 1.8s
-      setTimeout(() => resetScanner(), 1800);
-
-    } catch (err) {
-      toast('Erro ao salvar: ' + err.message, 'error');
-      btn.disabled = false;
-      btn.textContent = 'Salvar Sub-Status';
-    }
-  }
-
-  /* ── Reset ────────────────────────────────────── */
-  function resetScanner() {
-    currentOrder = null;
-    selectedSubstatusId = null;
-    document.getElementById('result-area').innerHTML = '';
-    document.getElementById('scan-again-btn').style.display = 'none';
-    document.getElementById('scanner-ring').classList.remove('ready');
-    clearInput();
-  }
-
-  /* ── Helpers ──────────────────────────────────── */
+  /* ── Helpers ───────────────────────────────────── */
   function escHtml(s = '') {
     return String(s)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;')
       .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  function shortSit(s = '') {
-    return s.replace('Pedido - ', '') || s;
   }
 
   function toast(msg, type = 'info') {
@@ -739,10 +785,9 @@
     el.className = `toast ${type}`;
     el.textContent = msg;
     document.getElementById('toast-container').appendChild(el);
-    setTimeout(() => el.remove(), 3200);
+    setTimeout(() => el.remove(), 3000);
   }
 
-  /* ── Start ────────────────────────────────────── */
   boot();
 </script>
 </body>
