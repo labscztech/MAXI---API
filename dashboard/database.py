@@ -2,22 +2,43 @@ import sqlite3
 import json
 import re
 import html as html_mod
+import hashlib
+import secrets
 from pathlib import Path
 
 DB_PATH = Path(__file__).parent / "data" / "maxi.db"
 DATA_PATH = Path(__file__).parent.parent / "pedidos.json"
 
 DEFAULT_SUBSTATUSES = [
-    {"id": 1, "nome": "Aguardando Corte",         "cor": "#94a3b8", "ordem": 1},
-    {"id": 2, "nome": "Corte",                    "cor": "#f59e0b", "ordem": 2},
-    {"id": 3, "nome": "Usinagem",                 "cor": "#f97316", "ordem": 3},
-    {"id": 4, "nome": "Montagem",                 "cor": "#8b5cf6", "ordem": 4},
-    {"id": 5, "nome": "Acabamento",               "cor": "#ec4899", "ordem": 5},
-    {"id": 6, "nome": "Pintura / Revestimento",   "cor": "#06b6d4", "ordem": 6},
-    {"id": 7, "nome": "Secagem / Cura",           "cor": "#3b82f6", "ordem": 7},
-    {"id": 8, "nome": "Controle de Qualidade",    "cor": "#10b981", "ordem": 8},
-    {"id": 9, "nome": "Embalagem",                "cor": "#84cc16", "ordem": 9},
-    {"id": 10, "nome": "Pronto para Expedicao",   "cor": "#22c55e", "ordem": 10},
+    # PROD. PERFIL
+    {"id": 1, "fluxo": "PROD. PERFIL", "nome": "1 - CORTE", "cor": "#f59e0b", "ordem": 1},
+    {"id": 2, "fluxo": "PROD. PERFIL", "nome": "2 - USINAGEM", "cor": "#f97316", "ordem": 2},
+    {"id": 3, "fluxo": "PROD. PERFIL", "nome": "3 - AGUARDANDO VIDRO", "cor": "#94a3b8", "ordem": 3},
+    {"id": 4, "fluxo": "PROD. PERFIL", "nome": "4 - MONTAGEM", "cor": "#8b5cf6", "ordem": 4},
+    {"id": 5, "fluxo": "PROD. PERFIL", "nome": "5 - QUALIDADE", "cor": "#10b981", "ordem": 5},
+    {"id": 6, "fluxo": "PROD. PERFIL", "nome": "6 - EMBALAGEM", "cor": "#84cc16", "ordem": 6},
+    {"id": 7, "fluxo": "PROD. PERFIL", "nome": "7 - EXPEDIÇÃO", "cor": "#22c55e", "ordem": 7},
+
+    # PROD. VIDRO (FLUXO SIMPLES)
+    {"id": 8, "fluxo": "PROD. VIDRO (FLUXO SIMPLES)", "nome": "1 - CORTE", "cor": "#f59e0b", "ordem": 8},
+    {"id": 9, "fluxo": "PROD. VIDRO (FLUXO SIMPLES)", "nome": "2 - LAPIDAÇÃO", "cor": "#0ea5e9", "ordem": 9},
+    {"id": 10, "fluxo": "PROD. VIDRO (FLUXO SIMPLES)", "nome": "3 - LAVAGEM", "cor": "#3b82f6", "ordem": 10},
+    {"id": 11, "fluxo": "PROD. VIDRO (FLUXO SIMPLES)", "nome": "4 - QUALIDADE", "cor": "#10b981", "ordem": 11},
+    {"id": 12, "fluxo": "PROD. VIDRO (FLUXO SIMPLES)", "nome": "5 - EMBALAGEM", "cor": "#84cc16", "ordem": 12},
+    {"id": 13, "fluxo": "PROD. VIDRO (FLUXO SIMPLES)", "nome": "6 - EXPEDIÇÃO", "cor": "#22c55e", "ordem": 13},
+
+    # PROD. VIDRO (FLUXO COMPLEXO)
+    {"id": 14, "fluxo": "PROD. VIDRO (FLUXO COMPLEXO)", "nome": "1 - CORTE", "cor": "#f59e0b", "ordem": 14},
+    {"id": 15, "fluxo": "PROD. VIDRO (FLUXO COMPLEXO)", "nome": "2 - LAPIDAÇÃO", "cor": "#0ea5e9", "ordem": 15},
+    {"id": 16, "fluxo": "PROD. VIDRO (FLUXO COMPLEXO)", "nome": "3.1 - BISOTÊ", "cor": "#6366f1", "ordem": 16},
+    {"id": 17, "fluxo": "PROD. VIDRO (FLUXO COMPLEXO)", "nome": "3.2 - PINTURA", "cor": "#d946ef", "ordem": 17},
+    {"id": 18, "fluxo": "PROD. VIDRO (FLUXO COMPLEXO)", "nome": "3.3 - JATO", "cor": "#8b5cf6", "ordem": 18},
+    {"id": 19, "fluxo": "PROD. VIDRO (FLUXO COMPLEXO)", "nome": "3.4 - RECORTE/MODELAGEM", "cor": "#ec4899", "ordem": 19},
+    {"id": 20, "fluxo": "PROD. VIDRO (FLUXO COMPLEXO)", "nome": "4 - LAVAGEM", "cor": "#3b82f6", "ordem": 20},
+    {"id": 21, "fluxo": "PROD. VIDRO (FLUXO COMPLEXO)", "nome": "5 - MONTAGEM", "cor": "#a855f7", "ordem": 21},
+    {"id": 22, "fluxo": "PROD. VIDRO (FLUXO COMPLEXO)", "nome": "6 - QUALIDADE", "cor": "#10b981", "ordem": 22},
+    {"id": 23, "fluxo": "PROD. VIDRO (FLUXO COMPLEXO)", "nome": "7 - EMBALAGEM", "cor": "#84cc16", "ordem": 23},
+    {"id": 24, "fluxo": "PROD. VIDRO (FLUXO COMPLEXO)", "nome": "8 - EXPEDIÇÃO", "cor": "#22c55e", "ordem": 24},
 ]
 
 
@@ -59,11 +80,22 @@ def init_db():
                 aprov_filial    TEXT,
                 aprov_empresa   TEXT,
                 substatus_updated_at TEXT,
-                raw_json        TEXT
+                raw_json        TEXT,
+                cliente_cnpj_cpf TEXT,
+                cliente_fone    TEXT,
+                cliente_email   TEXT,
+                cliente_cidade  TEXT,
+                cliente_uf      TEXT,
+                previsao_entrega TEXT,
+                data_producao   TEXT,
+                data_produzido  TEXT,
+                data_entregue_parceiro TEXT,
+                data_entregue_cliente  TEXT
             );
 
             CREATE TABLE IF NOT EXISTS substatuses (
                 id      INTEGER PRIMARY KEY,
+                fluxo   TEXT NOT NULL DEFAULT 'Geral',
                 nome    TEXT NOT NULL,
                 cor     TEXT NOT NULL DEFAULT '#64748b',
                 ordem   INTEGER NOT NULL,
@@ -80,13 +112,67 @@ def init_db():
             );
         """)
 
+        # Database Fluxos Migration
+        sub_cols = {r[1] for r in conn.execute("PRAGMA table_info(substatuses)").fetchall()}
+        if "fluxo" not in sub_cols:
+            conn.execute("ALTER TABLE substatuses ADD COLUMN fluxo TEXT DEFAULT 'Geral'")
+            # Wipe all previous un-grouped sub-statuses as they are incompatible
+            conn.execute("DELETE FROM substatuses")
+            # Clear invalid references from all orders
+            conn.execute("UPDATE orders SET substatus_id = NULL")
+
         # Seed sub-statuses only if empty
         count = conn.execute("SELECT COUNT(*) FROM substatuses").fetchone()[0]
         if count == 0:
             conn.executemany(
-                "INSERT INTO substatuses (id, nome, cor, ordem) VALUES (:id, :nome, :cor, :ordem)",
+                "INSERT INTO substatuses (id, fluxo, nome, cor, ordem) VALUES (:id, :fluxo, :nome, :cor, :ordem)",
                 DEFAULT_SUBSTATUSES
             )
+
+        # Auth tables
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS auth_users (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                username      TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL,
+                salt          TEXT NOT NULL,
+                role          TEXT NOT NULL DEFAULT 'USER',
+                created_at    TEXT DEFAULT (datetime('now','localtime'))
+            );
+            CREATE TABLE IF NOT EXISTS auth_sessions (
+                token      TEXT PRIMARY KEY,
+                user_id    INTEGER NOT NULL,
+                created_at TEXT DEFAULT (datetime('now','localtime')),
+                FOREIGN KEY (user_id) REFERENCES auth_users(id)
+            );
+            CREATE TABLE IF NOT EXISTS user_substatuses (
+                user_id      INTEGER NOT NULL,
+                substatus_id INTEGER NOT NULL,
+                PRIMARY KEY (user_id, substatus_id),
+                FOREIGN KEY (user_id) REFERENCES auth_users(id),
+                FOREIGN KEY (substatus_id) REFERENCES substatuses(id)
+            );
+        """)
+
+        # First-boot: cria admin padrão se não existir nenhum
+        if conn.execute("SELECT COUNT(*) FROM auth_users WHERE role='ADMIN'").fetchone()[0] == 0:
+            pwd_hash, salt = _hash_password('admin')
+            conn.execute(
+                "INSERT INTO auth_users (username, password_hash, salt, role) VALUES (?,?,?,'ADMIN')",
+                ('admin', pwd_hash, salt)
+            )
+
+        # Migração: adicionar colunas novas em bancos existentes
+        existing_cols = {r[1] for r in conn.execute("PRAGMA table_info(orders)").fetchall()}
+        new_cols = [
+            "cliente_cnpj_cpf", "cliente_fone", "cliente_email",
+            "cliente_cidade", "cliente_uf", "previsao_entrega",
+            "data_producao", "data_produzido",
+            "data_entregue_parceiro", "data_entregue_cliente",
+        ]
+        for col in new_cols:
+            if col not in existing_cols:
+                conn.execute(f"ALTER TABLE orders ADD COLUMN {col} TEXT")
 
     load_pedidos_json()
 
@@ -182,6 +268,113 @@ def load_pedidos_json():
     return len(rows)
 
 
+def upsert_single_order(record: dict):
+    """Insere ou atualiza um único pedido vindo da API.
+    Preserva substatus_id já existente."""
+    with get_conn() as conn:
+        conn.execute("""
+            INSERT INTO orders (
+                op, parceiro, razao_social, fantasia, nome_consumidor, situacao,
+                data_orcamento, data_pedido, ultima_alteracao,
+                qtd_portas, qtd_vidros, qtd_quadros, qtd_camarim, qtd_estrutural,
+                qtd_total, valor_total, vendedor_pedido, andamento, regiao,
+                pedido_fabrica, pedido_parceiro, aprov_cliente, aprov_filial,
+                aprov_empresa, raw_json,
+                cliente_cnpj_cpf, cliente_fone, cliente_email, cliente_cidade, cliente_uf,
+                previsao_entrega, data_producao, data_produzido,
+                data_entregue_parceiro, data_entregue_cliente
+            ) VALUES (
+                :op, :parceiro, :razao_social, :fantasia, :nome_consumidor, :situacao,
+                :data_orcamento, :data_pedido, :ultima_alteracao,
+                :qtd_portas, :qtd_vidros, :qtd_quadros, :qtd_camarim, :qtd_estrutural,
+                :qtd_total, :valor_total, :vendedor_pedido, :andamento, :regiao,
+                :pedido_fabrica, :pedido_parceiro, :aprov_cliente, :aprov_filial,
+                :aprov_empresa, :raw_json,
+                :cliente_cnpj_cpf, :cliente_fone, :cliente_email, :cliente_cidade, :cliente_uf,
+                :previsao_entrega, :data_producao, :data_produzido,
+                :data_entregue_parceiro, :data_entregue_cliente
+            ) ON CONFLICT(op) DO UPDATE SET
+                parceiro        = excluded.parceiro,
+                razao_social    = excluded.razao_social,
+                fantasia        = excluded.fantasia,
+                nome_consumidor = excluded.nome_consumidor,
+                situacao        = excluded.situacao,
+                data_orcamento  = excluded.data_orcamento,
+                data_pedido     = excluded.data_pedido,
+                ultima_alteracao= excluded.ultima_alteracao,
+                qtd_portas      = excluded.qtd_portas,
+                qtd_vidros      = excluded.qtd_vidros,
+                qtd_quadros     = excluded.qtd_quadros,
+                qtd_camarim     = excluded.qtd_camarim,
+                qtd_estrutural  = excluded.qtd_estrutural,
+                qtd_total       = excluded.qtd_total,
+                valor_total     = excluded.valor_total,
+                vendedor_pedido = excluded.vendedor_pedido,
+                andamento       = excluded.andamento,
+                regiao          = excluded.regiao,
+                pedido_fabrica  = excluded.pedido_fabrica,
+                pedido_parceiro = excluded.pedido_parceiro,
+                aprov_cliente   = excluded.aprov_cliente,
+                aprov_filial    = excluded.aprov_filial,
+                aprov_empresa   = excluded.aprov_empresa,
+                raw_json        = excluded.raw_json,
+                cliente_cnpj_cpf = excluded.cliente_cnpj_cpf,
+                cliente_fone    = excluded.cliente_fone,
+                cliente_email   = excluded.cliente_email,
+                cliente_cidade  = excluded.cliente_cidade,
+                cliente_uf      = excluded.cliente_uf,
+                previsao_entrega = excluded.previsao_entrega,
+                data_producao   = excluded.data_producao,
+                data_produzido  = excluded.data_produzido,
+                data_entregue_parceiro = excluded.data_entregue_parceiro,
+                data_entregue_cliente  = excluded.data_entregue_cliente
+                -- substatus_id intencionalmente NÃO atualizado para preservar atualizações manuais
+        """, record)
+    return True
+
+
+def upsert_orders_list(records: list[dict]):
+    """Insere ou atualiza ordens vindas da API de lista.
+    Atualiza apenas informações básicas (status, valor, datas), e
+    NÃO zera as quantidades que só vêm na API de pedido completo."""
+    if not records:
+        return 0
+
+    with get_conn() as conn:
+        conn.executemany("""
+            INSERT INTO orders (
+                op, parceiro, razao_social, situacao,
+                data_orcamento, ultima_alteracao,
+                valor_total, andamento, cliente_cnpj_cpf,
+                -- campos que a API da lista não traz mas precisam de valor inicial
+                fantasia, nome_consumidor, data_pedido,
+                qtd_portas, qtd_vidros, qtd_quadros, qtd_camarim, qtd_estrutural, qtd_total,
+                vendedor_pedido, regiao, pedido_fabrica, pedido_parceiro,
+                aprov_cliente, aprov_filial, aprov_empresa, raw_json
+            ) VALUES (
+                :op, :parceiro, :razao_social, :situacao,
+                :data_orcamento, :ultima_alteracao,
+                :valor_total, :andamento, :cliente_cnpj_cpf,
+                '', '', '',
+                0, 0, 0, 0, 0, 0,
+                '', '', '', '',
+                '', '', '', :raw_json
+            ) ON CONFLICT(op) DO UPDATE SET
+                parceiro        = excluded.parceiro,
+                razao_social    = excluded.razao_social,
+                situacao        = excluded.situacao,
+                -- para evitar sobrescrever a data original das outras APIs com a da listagem, deixamos como está
+                data_orcamento  = coalesce(nullif(orders.data_orcamento, ''), excluded.data_orcamento),
+                ultima_alteracao= excluded.ultima_alteracao,
+                valor_total     = excluded.valor_total,
+                andamento       = excluded.andamento,
+                cliente_cnpj_cpf= excluded.cliente_cnpj_cpf
+                -- NOTE: quantidades, vendedor e outras aprovações NÃO são mexidas.
+                -- raw_json a gente só atualiza da listagem se estiver vazio ou mantemos o do pedido para não perder ITENS
+        """, records)
+    return len(records)
+
+
 def get_orders(situacao=None, substatus_id=None, parceiro=None, regiao=None, search=None):
     sql = """
         SELECT o.*, s.nome as substatus_nome, s.cor as substatus_cor
@@ -268,13 +461,13 @@ def get_substatuses():
         return [dict(r) for r in rows]
 
 
-def upsert_substatus(id: int, nome: str, cor: str, ordem: int):
+def upsert_substatus(id: int, nome: str, cor: str, ordem: int, fluxo: str = 'Geral'):
     with get_conn() as conn:
         conn.execute("""
-            INSERT INTO substatuses (id, nome, cor, ordem)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET nome=excluded.nome, cor=excluded.cor, ordem=excluded.ordem
-        """, (id, nome, cor, ordem))
+            INSERT INTO substatuses (id, fluxo, nome, cor, ordem)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET nome=excluded.nome, cor=excluded.cor, ordem=excluded.ordem, fluxo=excluded.fluxo
+        """, (id, fluxo, nome, cor, ordem))
 
 
 def get_stats():
@@ -441,6 +634,134 @@ def load_from_html(html: str) -> int:
         """, rows)
 
     return len(rows)
+
+
+# ── Auth helpers ─────────────────────────────────────────────────────────────
+
+def _hash_password(password: str, salt: str = None):
+    if salt is None:
+        salt = secrets.token_hex(32)
+    h = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 260000)
+    return h.hex(), salt
+
+
+def _verify_password(password: str, stored_hash: str, salt: str) -> bool:
+    computed, _ = _hash_password(password, salt)
+    return secrets.compare_digest(computed, stored_hash)
+
+
+def create_user(username: str, password: str, role: str = 'USER') -> int:
+    pwd_hash, salt = _hash_password(password)
+    with get_conn() as conn:
+        cur = conn.execute(
+            "INSERT INTO auth_users (username, password_hash, salt, role) VALUES (?,?,?,?)",
+            (username, pwd_hash, salt, role)
+        )
+        return cur.lastrowid
+
+
+def authenticate_user(username: str, password: str):
+    with get_conn() as conn:
+        row = conn.execute("SELECT * FROM auth_users WHERE username = ?", (username,)).fetchone()
+    if not row:
+        return None
+    user = dict(row)
+    if not _verify_password(password, user['password_hash'], user['salt']):
+        return None
+    return user
+
+
+def get_user_by_id(user_id: int):
+    with get_conn() as conn:
+        row = conn.execute("SELECT * FROM auth_users WHERE id = ?", (user_id,)).fetchone()
+        return dict(row) if row else None
+
+
+def get_all_users() -> list:
+    with get_conn() as conn:
+        users = conn.execute(
+            "SELECT id, username, role, created_at FROM auth_users ORDER BY id"
+        ).fetchall()
+        result = []
+        for u in users:
+            ud = dict(u)
+            subs = conn.execute(
+                "SELECT substatus_id FROM user_substatuses WHERE user_id = ?", (ud['id'],)
+            ).fetchall()
+            ud['substatus_ids'] = [r[0] for r in subs]
+            result.append(ud)
+        return result
+
+
+def update_user(user_id: int, username: str = None, role: str = None, password: str = None):
+    with get_conn() as conn:
+        if username is not None:
+            conn.execute("UPDATE auth_users SET username = ? WHERE id = ?", (username, user_id))
+        if role is not None:
+            conn.execute("UPDATE auth_users SET role = ? WHERE id = ?", (role, user_id))
+        if password is not None:
+            pwd_hash, salt = _hash_password(password)
+            conn.execute(
+                "UPDATE auth_users SET password_hash = ?, salt = ? WHERE id = ?",
+                (pwd_hash, salt, user_id)
+            )
+
+
+def delete_user(user_id: int):
+    with get_conn() as conn:
+        conn.execute("DELETE FROM user_substatuses WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM auth_sessions WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM auth_users WHERE id = ?", (user_id,))
+
+
+def change_user_password(user_id: int, old_password: str, new_password: str) -> bool:
+    user = get_user_by_id(user_id)
+    if not user:
+        return False
+    if not _verify_password(old_password, user['password_hash'], user['salt']):
+        return False
+    update_user(user_id, password=new_password)
+    return True
+
+
+def create_session(user_id: int) -> str:
+    token = secrets.token_urlsafe(48)
+    with get_conn() as conn:
+        conn.execute("INSERT INTO auth_sessions (token, user_id) VALUES (?,?)", (token, user_id))
+    return token
+
+
+def get_session(token: str):
+    with get_conn() as conn:
+        row = conn.execute("""
+            SELECT u.id, u.username, u.role
+            FROM auth_sessions s
+            JOIN auth_users u ON s.user_id = u.id
+            WHERE s.token = ?
+        """, (token,)).fetchone()
+        return dict(row) if row else None
+
+
+def delete_session(token: str):
+    with get_conn() as conn:
+        conn.execute("DELETE FROM auth_sessions WHERE token = ?", (token,))
+
+
+def get_user_substatuses(user_id: int) -> list:
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT substatus_id FROM user_substatuses WHERE user_id = ?", (user_id,)
+        ).fetchall()
+        return [r[0] for r in rows]
+
+
+def set_user_substatuses(user_id: int, substatus_ids: list):
+    with get_conn() as conn:
+        conn.execute("DELETE FROM user_substatuses WHERE user_id = ?", (user_id,))
+        conn.executemany(
+            "INSERT INTO user_substatuses (user_id, substatus_id) VALUES (?,?)",
+            [(user_id, sid) for sid in substatus_ids]
+        )
 
 
 def get_history(op: str = None, limit: int = 50):

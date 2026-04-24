@@ -481,9 +481,13 @@
         <p id="header-sub">Carregando setor...</p>
       </div>
     </div>
-    <div class="ws-badge">
-      <div class="ws-dot" id="ws-dot"></div>
-      <span id="ws-label">Conectando...</span>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="font-size:12px;color:var(--muted);padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface)" id="user-badge"></div>
+      <button onclick="doLogout()" style="font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-family:inherit" title="Sair">&#8594; Sair</button>
+      <div class="ws-badge">
+        <div class="ws-dot" id="ws-dot"></div>
+        <span id="ws-label">Conectando...</span>
+      </div>
     </div>
   </header>
 
@@ -496,30 +500,80 @@
 
 <script>
   /* ── State ─────────────────────────────────────── */
-  let SETOR = null;           // substatus atual do setor
-  let ALL_SUBSTATUSES = [];   // todos os substatuses
+  let SETOR = null;
+  let ALL_SUBSTATUSES = [];
+  let CURRENT_USER = null;
   let scanDebounce = null;
   let counts = { ok: 0, erro: 0 };
-  let lastResult = null;      // timeout do feedback
+  let lastResult = null;
+
+  /* ── Auth helpers ───────────────────────────────── */
+  function getToken() { return localStorage.getItem('maxi_token'); }
+
+  async function api(path, opts = {}) {
+    const token = getToken();
+    const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    const r = await fetch(path, { ...opts, headers });
+    if (r.status === 401) {
+      localStorage.removeItem('maxi_token');
+      location.replace('/login');
+      throw new Error('Sessão expirada');
+    }
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+    return r.json();
+  }
+
+  async function doLogout() {
+    try { await api('/api/logout', { method: 'POST' }); } catch (_) {}
+    localStorage.removeItem('maxi_token');
+    localStorage.removeItem('maxi_username');
+    localStorage.removeItem('maxi_role');
+    location.replace('/login');
+  }
 
   /* ── Boot ──────────────────────────────────────── */
   async function boot() {
+    // Bloqueia acesso sem token antes de qualquer renderização
+    if (!getToken()) { location.replace('/login'); return; }
+
+    connectWS();
+
+    try {
+      [CURRENT_USER, ALL_SUBSTATUSES] = await Promise.all([
+        api('/api/me'),
+        api('/api/substatuses'),
+      ]);
+    } catch (_) { return; }
+
+    // Exibe nome do usuário no header
+    const badge = document.getElementById('user-badge');
+    if (badge) badge.textContent = CURRENT_USER.username;
+
     const params = new URLSearchParams(location.search);
     const setorId = params.get('setor');
 
-    connectWS();
-    ALL_SUBSTATUSES = await api('/api/substatuses');
+    // Substatuses disponíveis para este usuário
+    const allowedIds = CURRENT_USER.allowed_substatus_ids; // null = admin (todos)
+    const allowedSubs = allowedIds === null
+      ? ALL_SUBSTATUSES
+      : ALL_SUBSTATUSES.filter(s => allowedIds.includes(s.id));
 
     if (!setorId) {
-      showNoSetorMsg();
+      showSetorPicker(allowedSubs);
       return;
     }
 
-    // Tenta encontrar esse substatus pelo ID
     const found = ALL_SUBSTATUSES.find(s => String(s.id) === String(setorId));
 
     if (!found) {
       showNoSetorMsg(setorId);
+      return;
+    }
+
+    // Valida permissão: USER só pode usar substatuses autorizados
+    if (allowedIds !== null && !allowedIds.includes(found.id)) {
+      showDeniedMsg(found);
       return;
     }
 
@@ -548,7 +602,7 @@
   function renderUI() {
     // Atualiza header
     document.getElementById('header-title').textContent = SETOR.nome;
-    document.getElementById('header-sub').textContent = 'Scanner de Produção • FUSION';
+    document.getElementById('header-sub').textContent = (SETOR.fluxo ? SETOR.fluxo + ' • ' : '') + 'Scanner de Produção';
 
     document.getElementById('main-content').innerHTML = `
       <!-- Setor badge -->
@@ -726,14 +780,107 @@
     if (err) err.textContent = counts.erro;
   }
 
+  /* ── Seletor de setor (quando não há ?setor=) ────── */
+  function showSetorPicker(allowedSubs) {
+    const main = document.getElementById('main-content');
+    document.getElementById('header-title').textContent = 'Escolha o Setor';
+    document.getElementById('header-sub').textContent = 'Toque no setor em que você está trabalhando';
+
+    if (!allowedSubs.length) {
+      main.innerHTML = `
+        <div style="text-align:center;max-width:480px;padding:20px">
+          <div style="font-size:48px;margin-bottom:16px">🔒</div>
+          <h2 style="font-size:20px;font-weight:700;margin-bottom:10px">Sem setores autorizados</h2>
+          <p style="color:var(--muted);font-size:14px;line-height:1.7">
+            Sua conta não possui nenhum sub-status autorizado.<br>
+            Solicite ao administrador que configure suas permissões.
+          </p>
+        </div>`;
+      return;
+    }
+
+    const fluxos = {};
+    allowedSubs.forEach(s => {
+      const f = s.fluxo || 'Geral';
+      if (!fluxos[f]) fluxos[f] = [];
+      fluxos[f].push(s);
+    });
+
+    let cards = '';
+    for (const [f, list] of Object.entries(fluxos)) {
+      cards += `<div style="font-size:10px;text-transform:uppercase;color:var(--muted);font-weight:700;letter-spacing:0.08em;margin:16px 0 8px;text-align:left;width:100%;max-width:520px">${f}</div>`;
+      cards += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:520px">`;
+      cards += list.map(s => `
+        <button onclick="selectSetor(${s.id})" style="
+          background:rgba(${hexToRgbParts(s.cor)},0.08);
+          border:2px solid ${s.cor}44;
+          border-radius:12px;padding:16px;cursor:pointer;
+          display:flex;flex-direction:column;align-items:center;gap:8px;
+          transition:border-color 0.2s,background 0.2s;font-family:inherit">
+          <div style="width:20px;height:20px;border-radius:50%;background:${s.cor};box-shadow:0 0 10px ${s.cor}66"></div>
+          <span style="font-size:13px;font-weight:600;color:${s.cor};text-align:center">${escHtml(s.nome)}</span>
+        </button>`).join('');
+      cards += `</div>`;
+    }
+
+    main.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;width:100%;padding:10px 16px">${cards}</div>`;
+  }
+
+  function selectSetor(id) {
+    const found = ALL_SUBSTATUSES.find(s => s.id === id);
+    if (!found) return;
+    SETOR = found;
+    applySetorTheme(SETOR.cor);
+    document.getElementById('header-title').textContent = SETOR.nome;
+    document.getElementById('header-sub').textContent = (SETOR.fluxo || '') + ' • Scanner de Produção';
+    renderUI();
+    // Atualiza URL silenciosamente sem reload
+    history.replaceState(null, '', `?setor=${id}`);
+  }
+
+  function hexToRgbParts(hex) {
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
+    return `${r},${g},${b}`;
+  }
+
+  /* ── Acesso negado ao setor ──────────────────────── */
+  function showDeniedMsg(setor) {
+    const main = document.getElementById('main-content');
+    main.innerHTML = `
+      <div style="text-align:center;max-width:480px;padding:20px">
+        <div style="font-size:48px;margin-bottom:16px">⛔</div>
+        <h2 style="font-size:20px;font-weight:700;margin-bottom:10px;color:var(--red)">Acesso Negado</h2>
+        <p style="color:var(--muted);font-size:14px;line-height:1.7">
+          Você não tem permissão para operar o setor<br>
+          <b style="color:var(--text)">${escHtml(setor.nome)}</b>.<br><br>
+          Solicite ao administrador que adicione este setor às suas permissões,
+          ou acesse a URL sem o parâmetro <code>?setor</code> para ver seus setores autorizados.
+        </p>
+        <button onclick="history.replaceState(null,'','/scanner');boot()"
+          style="margin-top:20px;padding:10px 24px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
+          Ver Meus Setores
+        </button>
+      </div>`;
+  }
+
   /* ── Sem setor configurado ─────────────────────── */
   function showNoSetorMsg(id) {
     const main = document.getElementById('main-content');
-    const lista = ALL_SUBSTATUSES.length
-      ? ALL_SUBSTATUSES.map(s =>
-          `<code style="border-left:3px solid ${s.cor};margin:3px 0;display:block">?setor=${s.id} — ${s.nome}</code>`
-        ).join('')
-      : '';
+    let lista = '';
+    if (ALL_SUBSTATUSES.length) {
+      const fluxos = {};
+      ALL_SUBSTATUSES.forEach(s => {
+        const f = s.fluxo || 'Geral';
+        if (!fluxos[f]) fluxos[f] = [];
+        fluxos[f].push(s);
+      });
+      for (const [f, sublist] of Object.entries(fluxos)) {
+        lista += `<div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;margin:10px 0 4px">${f}</div>`;
+        lista += sublist.map(s => `<code style="border-left:3px solid ${s.cor};margin:3px 0;display:block">?setor=${s.id} — ${s.nome}</code>`).join('');
+      }
+    }
 
     main.innerHTML = `
       <div style="text-align:center;max-width:480px;padding:20px">
@@ -764,13 +911,6 @@
       setTimeout(connectWS, 3000);
     };
     setInterval(() => { if (ws?.readyState === 1) ws.send('ping'); }, 25000);
-  }
-
-  /* ── API ───────────────────────────────────────── */
-  async function api(path, opts = {}) {
-    const r = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...opts });
-    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
-    return r.json();
   }
 
   /* ── Helpers ───────────────────────────────────── */

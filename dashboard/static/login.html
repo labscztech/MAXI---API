@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FUSION — Entrar</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #060d1a;
+      --surface: #0f1d30;
+      --surface2: #162438;
+      --border: #1e3550;
+      --text: #e8f1ff;
+      --muted: #5a7a9e;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59,130,246,0.25);
+      --red: #ef4444;
+      --radius: 16px;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 70% 50% at 50% -10%, var(--accent-glow) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 400px;
+      background: rgba(15,29,48,0.85);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px 36px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+
+    .logo-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--accent), #6366f1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 0 20px var(--accent-glow);
+      flex-shrink: 0;
+    }
+
+    .logo-text h1 {
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      line-height: 1;
+    }
+
+    .logo-text p {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    .field {
+      margin-bottom: 18px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .field input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 13px 16px;
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 16px rgba(59,130,246,0.3);
+    }
+
+    .btn-login:hover:not(:disabled) {
+      background: #2563eb;
+      box-shadow: 0 4px 20px rgba(59,130,246,0.45);
+    }
+
+    .btn-login:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    #error-msg {
+      display: none;
+      margin-top: 16px;
+      padding: 12px 14px;
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.35);
+      border-radius: 8px;
+      color: #fca5a5;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .footer-note {
+      margin-top: 28px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="card">
+    <div class="logo">
+      <div class="logo-icon">&#9638;</div>
+      <div class="logo-text">
+        <h1>FUSION</h1>
+        <p>Maxi Portas — Produção</p>
+      </div>
+    </div>
+
+    <form id="login-form" onsubmit="doLogin(event)">
+      <div class="field">
+        <label>Usuário</label>
+        <input id="inp-username" type="text" autocomplete="username" placeholder="seu.usuario" required autofocus />
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input id="inp-password" type="password" autocomplete="current-password" placeholder="••••••••" required />
+      </div>
+      <button class="btn-login" type="submit" id="btn-submit">Entrar</button>
+    </form>
+
+    <div id="error-msg"></div>
+
+    <div class="footer-note">Acesso restrito — sistema interno Maxi Portas</div>
+  </div>
+</div>
+
+<script>
+  // Se já tiver token válido, redireciona direto
+  (async () => {
+    const token = localStorage.getItem('maxi_token');
+    if (!token) return;
+    try {
+      const r = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (r.ok) {
+        const me = await r.json();
+        location.replace(me.role === 'ADMIN' ? '/' : '/scanner');
+      }
+    } catch (_) {}
+  })();
+
+  async function doLogin(e) {
+    e.preventDefault();
+    const username = document.getElementById('inp-username').value.trim();
+    const password = document.getElementById('inp-password').value;
+    const btn = document.getElementById('btn-submit');
+    const errEl = document.getElementById('error-msg');
+
+    btn.disabled = true;
+    btn.textContent = 'Entrando...';
+    errEl.style.display = 'none';
+
+    try {
+      const r = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await r.json();
+
+      if (!r.ok) {
+        throw new Error(data.detail || 'Erro ao autenticar');
+      }
+
+      localStorage.setItem('maxi_token', data.token);
+      localStorage.setItem('maxi_username', data.username);
+      localStorage.setItem('maxi_role', data.role);
+
+      location.replace(data.role === 'ADMIN' ? '/' : '/scanner');
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+    }
+  }
+</script>
+</body>
+</html>

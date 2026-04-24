@@ -694,6 +694,117 @@
         transform: translateY(0)
       }
     }
+
+    /* ── Session / Auth UI ──────────────────────────────────────────────────── */
+    .session-btn {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      position: relative;
+      transition: background .15s
+    }
+
+    .session-btn:hover { background: var(--border) }
+
+    .session-role-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: var(--accent);
+      color: #fff;
+      text-transform: uppercase
+    }
+
+    .session-role-badge.user { background: #7c3aed }
+
+    .session-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 8px 32px #0006;
+      min-width: 180px;
+      z-index: 200;
+      overflow: hidden
+    }
+
+    .session-dropdown.hidden { display: none }
+
+    .session-dropdown button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 10px 16px;
+      font-size: 13px;
+      color: var(--text);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-family: inherit
+    }
+
+    .session-dropdown button:hover { background: var(--surface2) }
+
+    .session-dropdown button.danger { color: var(--red) }
+
+    /* ── Users modal ────────────────────────────────────────────────────────── */
+    .user-list-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      margin-bottom: 8px
+    }
+
+    .user-list-item .uname { font-weight: 600; flex: 1 }
+
+    .role-tag {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      text-transform: uppercase
+    }
+
+    .role-tag.admin { background: rgba(59,130,246,0.2); color: var(--accent) }
+    .role-tag.user  { background: rgba(124,58,237,0.2); color: #a78bfa }
+
+    .sub-check-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 8px
+    }
+
+    .sub-check-grid label {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 13px;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      transition: background .1s
+    }
+
+    .sub-check-grid label:hover { background: var(--border) }
+
+    .sub-check-grid input[type=checkbox] { accent-color: var(--accent) }
   </style>
 </head>
 
@@ -707,12 +818,21 @@
       <button class="btn btn-scan" onclick="openScannerModal()">
         <span>&#9639;</span> Escanear
       </button>
-      <span id="cred-badge" onclick="openCredModal()" title="Configurar credenciais"
+      <span id="cred-badge" onclick="openCredModal()" title="Configurar API Maxi"
         style="font-size:12px;padding:5px 10px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:var(--surface2)">
-        &#128274; <span id="cred-badge-text">sem login</span>
+        &#128274; <span id="cred-badge-text">API</span>
       </span>
+      <button class="btn btn-ghost" id="btn-manage-users" onclick="openUsersModal()" title="Gerenciar Operadores" style="display:none">&#128101; Gerenciar</button>
       <button class="btn btn-ghost" onclick="openConfigModal()" title="Configurar sub-status">&#9881;</button>
       <button class="btn btn-ghost" onclick="runSync()" id="sync-btn">&#8635; Sync</button>
+      <div class="session-btn" id="session-btn" onclick="toggleSessionMenu()">
+        <span id="session-username">—</span>
+        <span class="session-role-badge" id="session-role-badge">?</span>
+        <div class="session-dropdown hidden" id="session-dropdown">
+          <button onclick="openChangePwdModal();event.stopPropagation()">&#128273; Mudar Senha</button>
+          <button class="danger" onclick="doLogout();event.stopPropagation()">&#8594; Sair</button>
+        </div>
+      </div>
       <div id="ws-indicator" title="Conexão em tempo real"></div>
     </header>
 
@@ -883,6 +1003,59 @@
     </div>
   </div>
 
+  <!-- ══ USERS MODAL ════════════════════════════════════════════════════════ -->
+  <div id="users-modal" class="modal-bg hidden">
+    <div class="modal" style="width:min(660px,96vw)">
+      <div class="modal-header">
+        <div>
+          <h2 id="users-modal-title">Gerenciar Operadores</h2>
+          <p id="users-modal-sub">Crie e configure os acessos dos operadores de scanner</p>
+        </div>
+        <button class="modal-close" onclick="closeUsersModal()">&#10005;</button>
+      </div>
+      <div class="modal-body" id="users-modal-body" style="min-height:180px"></div>
+      <div class="modal-footer" id="users-modal-footer">
+        <button class="btn btn-ghost" id="users-back-btn" style="display:none" onclick="renderUsersList()">&#8592; Voltar</button>
+        <button class="btn btn-ghost" onclick="closeUsersModal()">Fechar</button>
+        <button class="btn btn-primary" id="users-save-btn" style="display:none" onclick="saveUserEdit()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CHANGE PASSWORD MODAL ══════════════════════════════════════════════ -->
+  <div id="changepwd-modal" class="modal-bg hidden">
+    <div class="modal" style="width:min(420px,96vw)">
+      <div class="modal-header">
+        <div>
+          <h2>Mudar Senha</h2>
+          <p>Altere a senha da sua conta</p>
+        </div>
+        <button class="modal-close" onclick="closeChangePwdModal()">&#10005;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div>
+            <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px;text-transform:uppercase">SENHA ATUAL</label>
+            <input id="pwd-old" type="password" autocomplete="current-password"
+              style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:14px;font-family:inherit"
+              placeholder="••••••••" />
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px;text-transform:uppercase">NOVA SENHA</label>
+            <input id="pwd-new" type="password" autocomplete="new-password"
+              style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:14px;font-family:inherit"
+              placeholder="••••••••" />
+          </div>
+          <div id="pwd-status" style="font-size:12px;color:var(--muted);padding:8px 12px;background:var(--surface2);border-radius:8px;display:none"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeChangePwdModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="submitChangePwd()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ TOAST CONTAINER ═══════════════════════════════════════════════════ -->
   <div id="toast-container"></div>
 
@@ -896,20 +1069,271 @@
       currentOrder: null,
       selectedSubstatusId: null,
       scanDebounce: null,
+      currentUser: null,
     };
 
-    /* ── API helpers ─────────────────────────────────────────────────────── */
+    /* ── Auth helpers ────────────────────────────────────────────────────── */
+    function getToken() { return localStorage.getItem('maxi_token'); }
+
     async function api(path, opts = {}) {
-      const r = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...opts });
-      if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+      const token = getToken();
+      const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      const r = await fetch(path, { ...opts, headers });
+      if (r.status === 401) {
+        localStorage.removeItem('maxi_token');
+        location.replace('/login');
+        throw new Error('Sessão expirada');
+      }
+      if (!r.ok) throw new Error(((await r.json().catch(() => ({}))).detail) || r.statusText);
       return r.json();
     }
 
     /* ── Boot ────────────────────────────────────────────────────────────── */
     async function boot() {
+      const token = getToken();
+      if (!token) { location.replace('/login'); return; }
+
+      try {
+        STATE.currentUser = await api('/api/me');
+      } catch (_) { return; }
+
+      // Configura UI de sessão
+      document.getElementById('session-username').textContent = STATE.currentUser.username;
+      const roleBadge = document.getElementById('session-role-badge');
+      roleBadge.textContent = STATE.currentUser.role;
+      if (STATE.currentUser.role === 'USER') roleBadge.classList.add('user');
+      if (STATE.currentUser.role === 'ADMIN') {
+        document.getElementById('btn-manage-users').style.display = '';
+      }
+
       await Promise.all([loadSubstatuses(), loadFilters(), loadStats(), loadCredStatus()]);
       await loadOrders();
       connectWS();
+
+      // Auto-sync em background: carrega dados locais imediatamente,
+      // depois puxa dados novos da API e atualiza a tabela silenciosamente.
+      if (STATE.currentUser.role === 'ADMIN') autoSync();
+    }
+
+    /* ── Session menu ────────────────────────────────────────────────────── */
+    function toggleSessionMenu() {
+      document.getElementById('session-dropdown').classList.toggle('hidden');
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!document.getElementById('session-btn').contains(e.target)) {
+        document.getElementById('session-dropdown').classList.add('hidden');
+      }
+    });
+
+    async function doLogout() {
+      try { await api('/api/logout', { method: 'POST' }); } catch (_) {}
+      localStorage.removeItem('maxi_token');
+      localStorage.removeItem('maxi_username');
+      localStorage.removeItem('maxi_role');
+      location.replace('/login');
+    }
+
+    /* ── Change Password Modal ───────────────────────────────────────────── */
+    function openChangePwdModal() {
+      document.getElementById('pwd-old').value = '';
+      document.getElementById('pwd-new').value = '';
+      const st = document.getElementById('pwd-status');
+      st.style.display = 'none';
+      document.getElementById('changepwd-modal').classList.remove('hidden');
+    }
+
+    function closeChangePwdModal() {
+      document.getElementById('changepwd-modal').classList.add('hidden');
+    }
+
+    async function submitChangePwd() {
+      const old_password = document.getElementById('pwd-old').value;
+      const new_password = document.getElementById('pwd-new').value;
+      const st = document.getElementById('pwd-status');
+      if (!old_password || !new_password) {
+        st.textContent = 'Preencha os dois campos.';
+        st.style.color = 'var(--red)';
+        st.style.display = 'block';
+        return;
+      }
+      try {
+        await api('/api/change-password', {
+          method: 'POST',
+          body: JSON.stringify({ old_password, new_password }),
+        });
+        toast('Senha alterada com sucesso!', 'success');
+        closeChangePwdModal();
+      } catch (err) {
+        st.textContent = err.message;
+        st.style.color = 'var(--red)';
+        st.style.display = 'block';
+      }
+    }
+
+    /* ── Users Modal ─────────────────────────────────────────────────────── */
+    let USERS_STATE = { users: [], editing: null };
+
+    function openUsersModal() {
+      document.getElementById('users-modal').classList.remove('hidden');
+      loadUsersModal();
+    }
+
+    function closeUsersModal() {
+      document.getElementById('users-modal').classList.add('hidden');
+    }
+
+    async function loadUsersModal() {
+      try {
+        USERS_STATE.users = await api('/api/users');
+        renderUsersList();
+      } catch (err) {
+        document.getElementById('users-modal-body').innerHTML =
+          `<p style="color:var(--red)">${err.message}</p>`;
+      }
+    }
+
+    function renderUsersList() {
+      USERS_STATE.editing = null;
+      document.getElementById('users-modal-title').textContent = 'Gerenciar Operadores';
+      document.getElementById('users-modal-sub').textContent = 'Crie e configure os acessos dos operadores de scanner';
+      document.getElementById('users-back-btn').style.display = 'none';
+      document.getElementById('users-save-btn').style.display = 'none';
+
+      const list = USERS_STATE.users.map(u => `
+        <div class="user-list-item">
+          <span class="uname">${escAttr(u.username)}</span>
+          <span class="role-tag ${u.role.toLowerCase()}">${u.role}</span>
+          <span style="font-size:12px;color:var(--muted)">${u.substatus_ids.length} sub-status</span>
+          <button class="btn btn-ghost" style="padding:5px 10px;font-size:12px" onclick="editUser(${u.id})">&#9998; Editar</button>
+          <button class="btn" style="padding:5px 10px;font-size:12px;background:rgba(239,68,68,0.1);color:var(--red);border:1px solid rgba(239,68,68,0.3)" onclick="deleteUser(${u.id},'${escAttr(u.username)}')">&#10005;</button>
+        </div>`).join('');
+
+      const newUserForm = `
+        <div style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)">
+          <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:12px">Novo Operador</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <input id="new-username" type="text" placeholder="Nome de usuário"
+              style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit" />
+            <input id="new-password" type="password" placeholder="Senha inicial"
+              style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit" />
+          </div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <select id="new-role"
+              style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit">
+              <option value="USER">Operador (USER)</option>
+              <option value="ADMIN">Administrador (ADMIN)</option>
+            </select>
+            <button class="btn btn-primary" onclick="createUser()" style="white-space:nowrap">+ Criar</button>
+          </div>
+        </div>`;
+
+      document.getElementById('users-modal-body').innerHTML =
+        (list || '<p style="color:var(--muted);text-align:center;padding:20px">Nenhum operador cadastrado ainda.</p>') + newUserForm;
+    }
+
+    async function createUser() {
+      const username = document.getElementById('new-username').value.trim();
+      const password = document.getElementById('new-password').value;
+      const role = document.getElementById('new-role').value;
+      if (!username || !password) { toast('Preencha usuário e senha.', 'error'); return; }
+      try {
+        await api('/api/users', { method: 'POST', body: JSON.stringify({ username, password, role }) });
+        toast(`Operador "${username}" criado!`, 'success');
+        await loadUsersModal();
+      } catch (err) { toast(err.message, 'error'); }
+    }
+
+    async function deleteUser(uid, uname) {
+      if (!confirm(`Excluir operador "${uname}"? Esta ação não pode ser desfeita.`)) return;
+      try {
+        await api(`/api/users/${uid}`, { method: 'DELETE' });
+        toast(`Operador excluído.`, 'success');
+        await loadUsersModal();
+      } catch (err) { toast(err.message, 'error'); }
+    }
+
+    function editUser(uid) {
+      USERS_STATE.editing = USERS_STATE.users.find(u => u.id === uid);
+      if (!USERS_STATE.editing) return;
+      const u = USERS_STATE.editing;
+
+      document.getElementById('users-modal-title').textContent = `Editar: ${u.username}`;
+      document.getElementById('users-modal-sub').textContent = 'Ajuste permissões e dados do operador';
+      document.getElementById('users-back-btn').style.display = '';
+      document.getElementById('users-save-btn').style.display = '';
+
+      const fluxos = {};
+      STATE.substatuses.forEach(s => {
+        const f = s.fluxo || 'Geral';
+        if (!fluxos[f]) fluxos[f] = [];
+        fluxos[f].push(s);
+      });
+
+      let subChecks = '';
+      for (const [f, list] of Object.entries(fluxos)) {
+        subChecks += `<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin:14px 0 6px">${f}</div>`;
+        subChecks += `<div class="sub-check-grid">${list.map(s => `
+          <label>
+            <input type="checkbox" value="${s.id}" ${u.substatus_ids.includes(s.id) ? 'checked' : ''} />
+            <span class="dot" style="background:${s.cor};width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0"></span>
+            ${s.nome}
+          </label>`).join('')}
+        </div>`;
+      }
+
+      document.getElementById('users-modal-body').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+          <div>
+            <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px;text-transform:uppercase">Usuário</label>
+            <input id="edit-username" type="text" value="${escAttr(u.username)}"
+              style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit" />
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px;text-transform:uppercase">Nova Senha (opcional)</label>
+            <input id="edit-password" type="password" placeholder="Deixe vazio para manter"
+              style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit" />
+          </div>
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="font-size:11px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px;text-transform:uppercase">Função</label>
+          <select id="edit-role"
+            style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit">
+            <option value="USER" ${u.role === 'USER' ? 'selected' : ''}>Operador (USER)</option>
+            <option value="ADMIN" ${u.role === 'ADMIN' ? 'selected' : ''}>Administrador (ADMIN)</option>
+          </select>
+        </div>
+        <div id="edit-subs-section">
+          <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:10px">Sub-status autorizados</div>
+          ${subChecks}
+        </div>`;
+
+      // Esconde sub-status quando role = ADMIN (acesso total)
+      document.getElementById('edit-role').addEventListener('change', function() {
+        document.getElementById('edit-subs-section').style.display =
+          this.value === 'ADMIN' ? 'none' : '';
+      });
+      if (u.role === 'ADMIN') document.getElementById('edit-subs-section').style.display = 'none';
+    }
+
+    async function saveUserEdit() {
+      const u = USERS_STATE.editing;
+      if (!u) return;
+      const username = document.getElementById('edit-username').value.trim();
+      const password = document.getElementById('edit-password').value || undefined;
+      const role = document.getElementById('edit-role').value;
+      const checked = [...document.querySelectorAll('#edit-subs-section input[type=checkbox]:checked')];
+      const substatus_ids = checked.map(cb => parseInt(cb.value, 10));
+
+      try {
+        await api(`/api/users/${u.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ username, password, role, substatus_ids }),
+        });
+        toast('Operador atualizado!', 'success');
+        await loadUsersModal();
+      } catch (err) { toast(err.message, 'error'); }
     }
 
     /* ── WebSocket ───────────────────────────────────────────────────────── */
@@ -1032,13 +1456,24 @@
     <span style="font-size:12px">Sem sub-status</span>
   </button>`;
 
-      const btns = STATE.substatuses.map(s => {
-        const active = STATE.filters.substatus_id === s.id ? 'active' : '';
-        return `<button class="filter-btn ${active}" data-key="substatus_id" data-val="${s.id}" onclick="filterClick(this)">
-      <span class="dot" style="background:${s.cor}"></span>
-      <span style="flex:1;text-align:left;font-size:12px">${s.nome}</span>
-    </button>`;
-      }).join('');
+      const fluxos = {};
+      STATE.substatuses.forEach(s => {
+        const f = s.fluxo || 'Geral';
+        if (!fluxos[f]) fluxos[f] = [];
+        fluxos[f].push(s);
+      });
+
+      let btns = '';
+      for (const [f, list] of Object.entries(fluxos)) {
+        btns += `<div style="font-size:10px;text-transform:uppercase;color:var(--muted);font-weight:700;margin:12px 0 4px 6px">${f}</div>`;
+        btns += list.map(s => {
+          const active = STATE.filters.substatus_id === s.id ? 'active' : '';
+          return `<button class="filter-btn ${active}" data-key="substatus_id" data-val="${s.id}" onclick="filterClick(this)">
+        <span class="dot" style="background:${s.cor}"></span>
+        <span style="flex:1;text-align:left;font-size:12px">${s.nome}</span>
+      </button>`;
+        }).join('');
+      }
 
       el.innerHTML = allBtn + btns;
     }
@@ -1226,21 +1661,37 @@
       <div class="field"><span>Última Alt.</span><span>${order.ultima_alteracao || '—'}</span></div>
     </div>`;
 
+      const fluxos = {};
+      STATE.substatuses.forEach(s => {
+        const f = s.fluxo || 'Geral';
+        if (!fluxos[f]) fluxos[f] = [];
+        fluxos[f].push(s);
+      });
+
+      let substatusSections = '';
+      for (const [f, list] of Object.entries(fluxos)) {
+        substatusSections += `
+          <div class="section-title" style="margin-top: 14px; border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-bottom: 10px">${f}</div>
+          <div class="substatus-grid">
+            ${list.map(s => `
+              <button class="sub-btn ${STATE.selectedSubstatusId === s.id ? 'selected' : ''}"
+                data-id="${s.id}" style="color:${s.cor}" onclick="selectSubstatus(${s.id})">
+                <span class="sub-dot" style="background:${s.cor}"></span>
+                ${s.nome}
+              </button>`).join('')}
+          </div>
+        `;
+      }
+
       const substatusSection = `
-    <div class="section-title">Sub-Status de Produção</div>
-    <div class="substatus-grid" id="substatus-grid">
-      ${STATE.substatuses.map(s => `
-        <button class="sub-btn ${STATE.selectedSubstatusId === s.id ? 'selected' : ''}"
-          style="color:${s.cor}" onclick="selectSubstatus(${s.id})">
-          <span class="sub-dot" style="background:${s.cor}"></span>
-          ${s.nome}
-        </button>`).join('')}
-      <button class="sub-btn ${STATE.selectedSubstatusId === null ? 'selected' : ''}"
-        style="color:var(--muted)" onclick="selectSubstatus(null)">
-        <span class="sub-dot" style="background:var(--muted)"></span>
-        Limpar sub-status
-      </button>
-    </div>`;
+        ${substatusSections}
+        <div style="margin-top: 14px">
+          <button class="sub-btn ${STATE.selectedSubstatusId === null ? 'selected' : ''}"
+            data-id="null" style="color:var(--muted);width:100%" onclick="selectSubstatus(null)">
+            <span class="sub-dot" style="background:var(--muted)"></span>
+            Limpar sub-status
+          </button>
+        </div>`;
 
       const histSection = history.length ? `
     <div class="section-title" style="margin-top:18px">Histórico</div>
@@ -1265,11 +1716,9 @@
     function selectSubstatus(id) {
       STATE.selectedSubstatusId = id;
       // Update button styles
-      document.querySelectorAll('#substatus-grid .sub-btn').forEach((btn, i) => {
-        const s = STATE.substatuses[i];
-        const isNull = !s; // last button = null
-        const active = isNull ? id === null : s.id === id;
-        btn.classList.toggle('selected', active);
+      document.querySelectorAll('.modal-body .sub-btn').forEach((btn) => {
+        const btnId = btn.dataset.id === 'null' ? null : parseInt(btn.dataset.id, 10);
+        btn.classList.toggle('selected', btnId === id);
       });
     }
 
@@ -1280,18 +1729,20 @@
 
     async function saveSubstatus() {
       if (!STATE.currentOrder) return;
+      const op = STATE.currentOrder.op; // salva antes de fechar o modal
       const btn = document.getElementById('save-sub-btn');
       btn.disabled = true;
       btn.textContent = 'Salvando...';
       try {
-        await api(`/api/orders/${encodeURIComponent(STATE.currentOrder.op)}/substatus`, {
+        await api(`/api/orders/${encodeURIComponent(op)}/substatus`, {
           method: 'PUT',
           body: JSON.stringify({ substatus_id: STATE.selectedSubstatusId, scanner_input: '' }),
         });
         toast('Sub-status atualizado!', 'success');
         closeOrderModal();
-        loadOrders();
-        loadStats();
+        // Puxa dados atualizados da API para este pedido, depois recarrega tudo
+        try { await api(`/api/fetch-op/${encodeURIComponent(op)}`); } catch (_) {}
+        await Promise.all([loadOrders(), loadStats()]);
       } catch (err) {
         toast(err.message, 'error');
       } finally {
@@ -1304,12 +1755,26 @@
     function openConfigModal() {
       document.getElementById('config-modal').classList.remove('hidden');
       const body = document.getElementById('config-body');
-      body.innerHTML = STATE.substatuses.map(s => `
-    <div class="substatus-config-item">
-      <input type="color" id="cor-${s.id}" value="${s.cor}"/>
-      <input type="text" id="nome-${s.id}" value="${s.nome}" placeholder="Nome do sub-status"/>
-      <span style="color:var(--muted);font-size:12px">#${s.ordem}</span>
-    </div>`).join('');
+      
+      const fluxos = {};
+      STATE.substatuses.forEach(s => {
+        const f = s.fluxo || 'Geral';
+        if (!fluxos[f]) fluxos[f] = [];
+        fluxos[f].push(s);
+      });
+
+      let html = '';
+      for (const [f, list] of Object.entries(fluxos)) {
+        html += `<div style="font-size:12px;font-weight:700;color:var(--muted);margin:14px 0 6px">${f}</div>`;
+        html += list.map(s => `
+          <div class="substatus-config-item">
+            <input type="color" id="cor-${s.id}" value="${s.cor}"/>
+            <input type="text" id="nome-${s.id}" value="${s.nome}" placeholder="Nome do sub-status"/>
+            <input type="text" id="fluxo-${s.id}" value="${s.fluxo}" style="width:170px" placeholder="Fluxo"/>
+            <span style="color:var(--muted);font-size:12px;width:24px">#${s.ordem}</span>
+          </div>`).join('');
+      }
+      body.innerHTML = html;
     }
 
     function closeConfigModal() {
@@ -1321,6 +1786,7 @@
         id: s.id,
         nome: document.getElementById(`nome-${s.id}`).value,
         cor: document.getElementById(`cor-${s.id}`).value,
+        fluxo: document.getElementById(`fluxo-${s.id}`).value,
         ordem: s.ordem,
       }));
       try {
@@ -1333,20 +1799,20 @@
       }
     }
 
-    /* ── Credenciais ─────────────────────────────────────────────────────── */
+    /* ── Credenciais (API Maxi Portas) ───────────────────────────────────── */
     async function loadCredStatus() {
       try {
-        const r = await api('/api/credentials');
+        const r = await api('/api/api-config');
         const badge = document.getElementById('cred-badge');
         const text = document.getElementById('cred-badge-text');
         if (r.configured) {
           badge.style.color = 'var(--green)';
           badge.style.borderColor = 'var(--green)';
-          text.textContent = r.usuario;
+          text.textContent = `API: ${r.empresa || 'ok'}`;
         } else {
           badge.style.color = 'var(--orange)';
           badge.style.borderColor = 'var(--orange)';
-          text.textContent = 'configurar login';
+          text.textContent = 'Config. API';
         }
       } catch (_) { }
     }
@@ -1354,8 +1820,10 @@
     function openCredModal() {
       document.getElementById('cred-modal').classList.remove('hidden');
       document.getElementById('cred-status').textContent = '';
-      api('/api/credentials').then(r => {
-        if (r.configured) document.getElementById('cred-usuario').value = r.usuario;
+      api('/api/api-config').then(r => {
+        if (r.configured) {
+          document.getElementById('cred-usuario').value = r.empresa || '';
+        }
       }).catch(() => { });
     }
     function closeCredModal() {
@@ -1363,18 +1831,17 @@
     }
 
     async function saveCredentials() {
-      const usuario = document.getElementById('cred-usuario').value.trim();
-      const senha = document.getElementById('cred-senha').value;
+      const token = document.getElementById('cred-usuario').value.trim();
+      const empresa = document.getElementById('cred-senha').value.trim();
       const status = document.getElementById('cred-status');
-      if (!usuario || !senha) { status.textContent = 'Preencha usuário e senha.'; return; }
+      if (!token || !empresa) { status.textContent = 'Preencha token e empresa.'; return; }
 
-      status.textContent = 'Salvando e testando login...';
+      status.textContent = 'Salvando...';
       try {
-        await api('/api/credentials', { method: 'POST', body: JSON.stringify({ usuario, senha }) });
-        // Testa imediatamente com um sync
+        await api('/api/api-config', { method: 'POST', body: JSON.stringify({ token, empresa }) });
         status.textContent = 'Conectando ao Maxi Portas...';
         const r = await api('/api/sync', { method: 'POST' });
-        toast(`Login OK — ${r.imported} registros importados`, 'success');
+        toast(`Config salva — ${r.imported} registros importados`, 'success');
         closeCredModal();
         loadCredStatus();
         loadOrders();
@@ -1393,8 +1860,7 @@
       try {
         const r = await api('/api/sync', { method: 'POST' });
         toast(`${r.imported} registros importados`, 'success');
-        loadOrders();
-        loadStats();
+        await Promise.all([loadOrders(), loadStats()]);
       } catch (err) {
         if (err.message.includes('Credenciais') || err.message.includes('Login')) {
           toast('Login não configurado — clique no ícone 🔒', 'error');
@@ -1405,6 +1871,21 @@
       } finally {
         btn.disabled = false;
         btn.textContent = '↺ Sync';
+      }
+    }
+
+    // Versão silenciosa chamada no boot e após mudanças de substatus
+    async function autoSync() {
+      const btn = document.getElementById('sync-btn');
+      if (btn) { btn.disabled = true; btn.textContent = '⟳ Sync...'; }
+      try {
+        const r = await api('/api/sync', { method: 'POST' });
+        await Promise.all([loadOrders(), loadStats()]);
+        if (r.imported > 0) toast(`${r.imported} registros atualizados da API`, 'info');
+      } catch (_) {
+        // Silencioso — não exibe erro se API não estiver configurada
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '↺ Sync'; }
       }
     }
 
