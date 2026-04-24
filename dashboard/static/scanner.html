@@ -482,6 +482,7 @@
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:10px">
+      <button id="btn-trocar-setor" onclick="voltarParaPicker()" style="display:none;font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--accent);background:var(--surface);color:var(--accent);cursor:pointer;font-family:inherit;font-weight:600" title="Trocar Setor">&#8592; Trocar Setor</button>
       <div style="font-size:12px;color:var(--muted);padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface)" id="user-badge"></div>
       <button onclick="doLogout()" style="font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-family:inherit" title="Sair">&#8594; Sair</button>
       <div class="ws-badge">
@@ -502,6 +503,7 @@
   /* ── State ─────────────────────────────────────── */
   let SETOR = null;
   let ALL_SUBSTATUSES = [];
+  let ALLOWED_SUBS = [];
   let CURRENT_USER = null;
   let scanDebounce = null;
   let counts = { ok: 0, erro: 0 };
@@ -559,6 +561,8 @@
       ? ALL_SUBSTATUSES
       : ALL_SUBSTATUSES.filter(s => allowedIds.includes(s.id));
 
+    ALLOWED_SUBS = allowedSubs;
+
     if (!setorId) {
       showSetorPicker(allowedSubs);
       return;
@@ -603,6 +607,8 @@
     // Atualiza header
     document.getElementById('header-title').textContent = SETOR.nome;
     document.getElementById('header-sub').textContent = (SETOR.fluxo ? SETOR.fluxo + ' • ' : '') + 'Scanner de Produção';
+    const btnTrocar = document.getElementById('btn-trocar-setor');
+    if (btnTrocar) btnTrocar.style.display = ALLOWED_SUBS.length > 1 ? '' : 'none';
 
     document.getElementById('main-content').innerHTML = `
       <!-- Setor badge -->
@@ -834,8 +840,13 @@
     document.getElementById('header-title').textContent = SETOR.nome;
     document.getElementById('header-sub').textContent = (SETOR.fluxo || '') + ' • Scanner de Produção';
     renderUI();
-    // Atualiza URL silenciosamente sem reload
     history.replaceState(null, '', `?setor=${id}`);
+  }
+
+  function voltarParaPicker() {
+    SETOR = null;
+    history.replaceState(null, '', '/scanner');
+    showSetorPicker(ALLOWED_SUBS);
   }
 
   function hexToRgbParts(hex) {
