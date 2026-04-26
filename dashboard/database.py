@@ -129,6 +129,31 @@ def init_db():
                 DEFAULT_SUBSTATUSES
             )
 
+        # Items tables
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS order_items (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                op              TEXT NOT NULL,
+                item_seq        INTEGER NOT NULL,
+                item_tipo       INTEGER NOT NULL DEFAULT 0,
+                item_codigo     TEXT DEFAULT '',
+                item_descricao  TEXT DEFAULT '',
+                quantidade      INTEGER DEFAULT 0,
+                valor_total     TEXT DEFAULT '',
+                substatus_id    INTEGER,
+                substatus_updated_at TEXT,
+                raw_json        TEXT,
+                UNIQUE(op, item_seq)
+            );
+            CREATE TABLE IF NOT EXISTS process_times (
+                item_tipo        INTEGER NOT NULL,
+                substatus_id     INTEGER NOT NULL,
+                dias_fixo        REAL DEFAULT 0,
+                dias_por_unidade REAL DEFAULT 0,
+                PRIMARY KEY (item_tipo, substatus_id)
+            );
+        """)
+
         # Auth tables
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS auth_users (
@@ -762,6 +787,124 @@ def set_user_substatuses(user_id: int, substatus_ids: list):
             "INSERT INTO user_substatuses (user_id, substatus_id) VALUES (?,?)",
             [(user_id, sid) for sid in substatus_ids]
         )
+
+
+ITEM_TIPO_NAMES = {0: "Portas", 1: "Vidros", 2: "Quadros", 5: "Camarim", 6: "Estrutural"}
+
+
+def upsert_order_items(op: str, items: list) -> int:
+    with get_conn() as conn:
+        for item in items:
+            conn.execute("""
+                INSERT INTO order_items
+                    (op, item_seq, item_tipo, item_codigo, item_descricao, quantidade, valor_total, raw_json)
+                VALUES (:op, :item_seq, :item_tipo, :item_codigo, :item_descricao, :quantidade, :valor_total, :raw_json)
+                ON CONFLICT(op, item_seq) DO UPDATE SET
+                    item_tipo      = excluded.item_tipo,
+                    item_codigo    = excluded.item_codigo,
+                    item_descricao = excluded.item_descricao,
+                    quantidade     = excluded.quantidade,
+                    valor_total    = excluded.valor_total,
+                    raw_json       = excluded.raw_json
+            """, {**item, "op": op})
+    return len(items)
+
+
+def get_order_items(op: str) -> list:
+    with get_conn() as conn:
+        rows = conn.execute("""
+            SELECT oi.*, s.nome as substatus_nome, s.cor as substatus_cor, s.fluxo as substatus_fluxo
+            FROM order_items oi
+            LEFT JOIN substatuses s ON oi.substatus_id = s.id
+            WHERE oi.op = ?
+            ORDER BY oi.item_seq
+        """, (op,)).fetchall()
+        result = []
+        for r in rows:
+            d = dict(r)
+            d["item_tipo_nome"] = ITEM_TIPO_NAMES.get(d["item_tipo"], f"Tipo {d['item_tipo']}")
+            result.append(d)
+        return result
+
+
+def update_item_substatus(item_id: int, substatus_id) -> bool:
+    with get_conn() as conn:
+        row = conn.execute("SELECT id FROM order_items WHERE id = ?", (item_id,)).fetchone()
+        if not row:
+            return False
+        conn.execute(
+            "UPDATE order_items SET substatus_id = ?, substatus_updated_at = datetime('now','localtime') WHERE id = ?",
+            (substatus_id, item_id)
+        )
+    return True
+
+
+def get_process_times() -> list:
+    with get_conn() as conn:
+        rows = conn.execute("""
+            SELECT pt.*, s.nome as substatus_nome, s.fluxo as substatus_fluxo, s.cor as substatus_cor, s.ordem as substatus_ordem
+            FROM process_times pt
+            JOIN substatuses s ON pt.substatus_id = s.id
+            ORDER BY pt.item_tipo, s.ordem
+        """).fetchall()
+        return [dict(r) for r in rows]
+
+
+def set_process_time(item_tipo: int, substatus_id: int, dias_fixo: float, dias_por_unidade: float):
+    with get_conn() as conn:
+        conn.execute("""
+            INSERT INTO process_times (item_tipo, substatus_id, dias_fixo, dias_por_unidade)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(item_tipo, substatus_id) DO UPDATE SET
+                dias_fixo        = excluded.dias_fixo,
+                dias_por_unidade = excluded.dias_por_unidade
+        """, (item_tipo, substatus_id, dias_fixo, dias_por_unidade))
+
+
+def calculate_delivery_estimate(op: str) -> dict:
+    from datetime import datetime, timedelta
+
+    items = get_order_items(op)
+    if not items:
+        return {"estimated": None, "total_days": 0, "reason": "Sem itens carregados", "items": []}
+
+    process_times = get_process_times()
+    if not process_times:
+        return {"estimated": None, "total_days": 0, "reason": "Sem tempos de processo configurados", "items": []}
+
+    pt_index: dict[tuple, dict] = {(pt["item_tipo"], pt["substatus_id"]): pt for pt in process_times}
+
+    critical_days = 0.0
+    item_estimates = []
+
+    for item in items:
+        tipo = item["item_tipo"]
+        qty = item["quantidade"] or 0
+        item_days = sum(
+            pt["dias_fixo"] + qty * pt["dias_por_unidade"]
+            for (it, _sid), pt in pt_index.items()
+            if it == tipo
+        )
+        item_estimates.append({
+            "id": item["id"],
+            "item_seq": item["item_seq"],
+            "item_descricao": item["item_descricao"] or item["item_codigo"],
+            "item_tipo_nome": item["item_tipo_nome"],
+            "quantidade": qty,
+            "days": round(item_days, 1),
+        })
+        critical_days = max(critical_days, item_days)
+
+    if critical_days == 0:
+        return {"estimated": None, "total_days": 0, "reason": "Sem tempos configurados para estes tipos de item", "items": item_estimates}
+
+    estimated_date = datetime.now() + timedelta(days=critical_days)
+    return {
+        "estimated": estimated_date.strftime("%d/%m/%Y"),
+        "total_days": round(critical_days, 1),
+        "reason": None,
+        "items": item_estimates,
+    }
 
 
 def get_history(op: str = None, limit: int = 50):

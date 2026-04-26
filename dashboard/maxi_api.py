@@ -236,6 +236,53 @@ def _parse_api_response(data: dict) -> dict:
     return record
 
 
+def extract_items_from_raw(raw_json_str: str) -> list[dict]:
+    """Extrai lista de itens a partir do raw_json já salvo no banco (dados.PEDIDO.ITENS)."""
+    try:
+        data = json.loads(raw_json_str)
+    except Exception:
+        return []
+
+    pedido = data.get("PEDIDO", {})
+    itens_raw = pedido.get("ITENS", [])
+
+    items_list: list = []
+    if isinstance(itens_raw, dict) and "ITEM" in itens_raw:
+        items_list = itens_raw["ITEM"]
+        if isinstance(items_list, dict):
+            items_list = [items_list]
+    elif isinstance(itens_raw, list):
+        items_list = itens_raw
+
+    result = []
+    for i, item in enumerate(items_list):
+        if not isinstance(item, dict):
+            continue
+        valores = item.get("ITEM_VALORES", {})
+        if not isinstance(valores, dict):
+            valores = {}
+
+        qty = int(_safe_float(valores.get("ITEM_QUANTIDADE", 0)) or _safe_float(item.get("ITEM_QUANTIDADE", 0)))
+
+        descricao = (
+            _safe_str(item.get("ITEM_DESCRICAO"))
+            or _safe_str(item.get("ITEM_REFERENCIA"))
+            or _safe_str(item.get("ITEM_CODIGO"))
+        )
+
+        result.append({
+            "item_seq": i + 1,
+            "item_tipo": _safe_int(item.get("ITEM_TIPO", 0)),
+            "item_codigo": _safe_str(item.get("ITEM_CODIGO", "")),
+            "item_descricao": descricao,
+            "quantidade": qty,
+            "valor_total": _safe_str(valores.get("ITEM_VALOR_TOTAL", "")),
+            "raw_json": json.dumps(item, ensure_ascii=False),
+        })
+
+    return result
+
+
 def fetch_multiple_orders(ops: list[str], token: str = "", empresa: str = "") -> list[dict]:
     """
     Busca vários pedidos sequencialmente.

@@ -318,7 +318,69 @@ async def fetch_op_from_api(op: str, _: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail=f"OP {op} não encontrada na API.")
 
     database.upsert_single_order(record)
+    if record.get("raw_json"):
+        raw_items = maxi_api.extract_items_from_raw(record["raw_json"])
+        if raw_items:
+            database.upsert_order_items(record["op"], raw_items)
     return database.get_order_by_op(op)
+
+
+# ── Order items ──────────────────────────────────────────────────────────────
+
+class ItemSubstatusUpdate(BaseModel):
+    substatus_id: Optional[int] = None
+
+
+@app.get("/api/orders/{op}/items")
+async def get_order_items(op: str, _: dict = Depends(get_current_user)):
+    items = database.get_order_items(op)
+    if not items:
+        order = database.get_order_by_op(op)
+        if order and order.get("raw_json"):
+            raw_items = maxi_api.extract_items_from_raw(order["raw_json"])
+            if raw_items:
+                database.upsert_order_items(op, raw_items)
+                items = database.get_order_items(op)
+    return items
+
+
+@app.put("/api/orders/{op}/items/{item_id}/substatus")
+async def update_item_substatus(op: str, item_id: int, body: ItemSubstatusUpdate, user: dict = Depends(get_current_user)):
+    if user["role"] == "USER" and body.substatus_id is not None:
+        allowed = database.get_user_substatuses(user["id"])
+        if body.substatus_id not in allowed:
+            raise HTTPException(status_code=403, detail="Sub-status não autorizado")
+    ok = database.update_item_substatus(item_id, body.substatus_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Item não encontrado")
+    items = database.get_order_items(op)
+    await manager.broadcast({"event": "item_substatus_updated", "op": op})
+    return items
+
+
+@app.get("/api/orders/{op}/delivery-estimate")
+def get_delivery_estimate(op: str, _: dict = Depends(get_current_user)):
+    return database.calculate_delivery_estimate(op)
+
+
+# ── Process times ─────────────────────────────────────────────────────────────
+
+@app.get("/api/process-times")
+def get_process_times_endpoint(_: dict = Depends(get_current_user)):
+    return database.get_process_times()
+
+
+class ProcessTimeUpdate(BaseModel):
+    item_tipo: int
+    substatus_id: int
+    dias_fixo: float = 0.0
+    dias_por_unidade: float = 0.0
+
+
+@app.put("/api/process-times")
+def update_process_time(body: ProcessTimeUpdate, _: dict = Depends(admin_only)):
+    database.set_process_time(body.item_tipo, body.substatus_id, body.dias_fixo, body.dias_por_unidade)
+    return {"ok": True}
 
 
 # ── Barcode lookup ────────────────────────────────────────────────────────────
@@ -335,6 +397,10 @@ async def scan_barcode(code: str, _: dict = Depends(get_current_user)):
             )
             if record:
                 database.upsert_single_order(record)
+                if record.get("raw_json"):
+                    raw_items = maxi_api.extract_items_from_raw(record["raw_json"])
+                    if raw_items:
+                        database.upsert_order_items(record["op"], raw_items)
                 api_ok = True
     except Exception:
         pass

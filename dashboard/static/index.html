@@ -824,6 +824,7 @@
       </span>
       <button class="btn btn-ghost" id="btn-manage-users" onclick="openUsersModal()" title="Gerenciar Operadores" style="display:none">&#128101; Gerenciar</button>
       <button class="btn btn-ghost" onclick="openConfigModal()" title="Configurar sub-status">&#9881;</button>
+      <button class="btn btn-ghost" id="btn-prazos" onclick="openPrazosModal()" title="Prazos de produção por processo" style="display:none">&#9201; Prazos</button>
       <button class="btn btn-ghost" onclick="runSync()" id="sync-btn">&#8635; Sync</button>
       <div class="session-btn" id="session-btn" onclick="toggleSessionMenu()">
         <span id="session-username">—</span>
@@ -1057,6 +1058,24 @@
   </div>
 
   <!-- ══ TOAST CONTAINER ═══════════════════════════════════════════════════ -->
+  <!-- ══ PRAZOS MODAL ══════════════════════════════════════════════════════ -->
+  <div id="prazos-modal" class="modal-bg hidden">
+    <div class="modal" style="width:min(720px,96vw)">
+      <div class="modal-header">
+        <div>
+          <h2>Prazos de Produção</h2>
+          <p>Configure dias por unidade para cada tipo de item em cada processo</p>
+        </div>
+        <button class="modal-close" onclick="closePrazosModal()">&#10005;</button>
+      </div>
+      <div class="modal-body" id="prazos-body"></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closePrazosModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="savePrazos()">Salvar Prazos</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast-container"></div>
 
   <script>
@@ -1067,7 +1086,9 @@
       stats: {},
       filters: { situacao: 'TODOS', substatus_id: null, parceiro: '', regiao: '', search: '' },
       currentOrder: null,
+      currentItems: [],
       selectedSubstatusId: null,
+      processTimes: [],
       scanDebounce: null,
       currentUser: null,
     };
@@ -1105,9 +1126,10 @@
       if (STATE.currentUser.role === 'USER') roleBadge.classList.add('user');
       if (STATE.currentUser.role === 'ADMIN') {
         document.getElementById('btn-manage-users').style.display = '';
+        document.getElementById('btn-prazos').style.display = '';
       }
 
-      await Promise.all([loadSubstatuses(), loadFilters(), loadStats(), loadCredStatus()]);
+      await Promise.all([loadSubstatuses(), loadFilters(), loadStats(), loadCredStatus(), loadProcessTimes()]);
       await loadOrders();
       connectWS();
 
@@ -1630,19 +1652,22 @@
       STATE.selectedSubstatusId = undefined;
 
       try {
-        const [order, history] = await Promise.all([
+        const [order, history, items, estimate] = await Promise.all([
           api(`/api/orders/${encodeURIComponent(op)}`),
           api(`/api/history?op=${encodeURIComponent(op)}&limit=5`),
+          api(`/api/orders/${encodeURIComponent(op)}/items`),
+          api(`/api/orders/${encodeURIComponent(op)}/delivery-estimate`),
         ]);
         STATE.currentOrder = order;
+        STATE.currentItems = items;
         STATE.selectedSubstatusId = order.substatus_id ?? null;
-        renderOrderModal(order, history);
+        renderOrderModal(order, history, items, estimate);
       } catch (err) {
         document.getElementById('order-modal-body').innerHTML = `<div style="color:var(--red)">${err.message}</div>`;
       }
     }
 
-    function renderOrderModal(order, history) {
+    function renderOrderModal(order, history, items = [], estimate = {}) {
       document.getElementById('order-modal-title').textContent = `OP ${order.op}`;
       document.getElementById('order-modal-sub').textContent =
         `${order.fantasia || order.razao_social} — ${order.parceiro}`;
@@ -1706,8 +1731,70 @@
         </div>`).join('')}
     </div>` : '';
 
-      document.getElementById('order-modal-body').innerHTML = infoGrid +
-        (inProd ? substatusSection : `<p style="color:var(--muted);font-size:13px">Sub-status disponível apenas para pedidos Em Produção.</p>`) +
+      // Estimativa de entrega
+      let estimateSection = '';
+      if (estimate && estimate.estimated) {
+        estimateSection = `
+          <div style="margin-bottom:14px;padding:12px 16px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:10px;display:flex;align-items:center;gap:12px">
+            <span style="font-size:22px">📅</span>
+            <div>
+              <div style="font-size:11px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:.06em">Estimativa de Entrega</div>
+              <div style="font-size:18px;font-weight:800;color:var(--text)">${estimate.estimated}</div>
+              <div style="font-size:12px;color:var(--muted)">${estimate.total_days} dias úteis de produção</div>
+            </div>
+          </div>`;
+      } else if (estimate && estimate.reason) {
+        estimateSection = `<div style="margin-bottom:14px;font-size:12px;color:var(--muted);padding:8px 12px;background:var(--surface2);border-radius:8px">📅 ${estimate.reason}</div>`;
+      }
+
+      // Itens da OP
+      let itemsSection = '';
+      if (items && items.length > 0) {
+        const subOptions = STATE.substatuses.map(s =>
+          `<option value="${s.id}">${s.fluxo} › ${s.nome}</option>`
+        ).join('');
+        const rows = items.map(it => {
+          const statusDot = it.substatus_cor
+            ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${it.substatus_cor};margin-right:4px"></span>${it.substatus_nome}`
+            : '<span style="color:var(--muted)">—</span>';
+          return `
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:8px 6px;font-size:13px;color:var(--muted)">${it.item_seq}</td>
+              <td style="padding:8px 6px;font-size:13px">
+                <div style="font-weight:600">${escHtml(it.item_descricao || it.item_codigo || '—')}</div>
+                <div style="font-size:11px;color:var(--muted)">${it.item_tipo_nome}</div>
+              </td>
+              <td style="padding:8px 6px;font-size:13px;text-align:center">${it.quantidade}</td>
+              <td style="padding:8px 6px;font-size:12px">${statusDot}</td>
+              <td style="padding:8px 6px">
+                <select onchange="saveItemSubstatus(${it.id}, this.value)"
+                  style="font-size:12px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;max-width:160px">
+                  <option value="">— setor —</option>
+                  ${subOptions}
+                </select>
+              </td>
+            </tr>`;
+        }).join('');
+        itemsSection = `
+          <div class="section-title" style="margin-top:16px">Itens da OP</div>
+          <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:14px">
+            <table style="width:100%;border-collapse:collapse">
+              <thead>
+                <tr style="background:var(--surface2)">
+                  <th style="padding:7px 6px;font-size:11px;color:var(--muted);font-weight:700;text-align:left">#</th>
+                  <th style="padding:7px 6px;font-size:11px;color:var(--muted);font-weight:700;text-align:left">Descrição</th>
+                  <th style="padding:7px 6px;font-size:11px;color:var(--muted);font-weight:700;text-align:center">Qtd</th>
+                  <th style="padding:7px 6px;font-size:11px;color:var(--muted);font-weight:700;text-align:left">Estágio Atual</th>
+                  <th style="padding:7px 6px;font-size:11px;color:var(--muted);font-weight:700;text-align:left">Atualizar</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>`;
+      }
+
+      document.getElementById('order-modal-body').innerHTML = infoGrid + estimateSection + itemsSection +
+        (inProd ? substatusSection : `<p style="color:var(--muted);font-size:13px">Sub-status da OP disponível apenas para pedidos Em Produção.</p>`) +
         histSection;
 
       document.getElementById('save-sub-btn').style.display = inProd ? '' : 'none';
@@ -1749,6 +1836,32 @@
         btn.disabled = false;
         btn.textContent = 'Salvar Sub-Status';
       }
+    }
+
+    async function saveItemSubstatus(itemId, value) {
+      if (!STATE.currentOrder) return;
+      const op = STATE.currentOrder.op;
+      const substatusId = value === '' ? null : parseInt(value, 10);
+      try {
+        const items = await api(`/api/orders/${encodeURIComponent(op)}/items/${itemId}/substatus`, {
+          method: 'PUT',
+          body: JSON.stringify({ substatus_id: substatusId }),
+        });
+        STATE.currentItems = items;
+        // Recalculate estimate
+        const estimate = await api(`/api/orders/${encodeURIComponent(op)}/delivery-estimate`);
+        const history = await api(`/api/history?op=${encodeURIComponent(op)}&limit=5`);
+        renderOrderModal(STATE.currentOrder, history, items, estimate);
+        toast('Item atualizado!', 'success');
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    }
+
+    async function loadProcessTimes() {
+      try {
+        STATE.processTimes = await api('/api/process-times');
+      } catch (_) { STATE.processTimes = []; }
     }
 
     /* ── Config Modal ────────────────────────────────────────────────────── */
@@ -1794,6 +1907,105 @@
         await loadSubstatuses();
         toast('Sub-status salvos!', 'success');
         closeConfigModal();
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    }
+
+    /* ── Prazos de Produção ──────────────────────────────────────────────── */
+    const ITEM_TIPO_NAMES = { 0: 'Portas', 1: 'Vidros', 2: 'Quadros', 5: 'Camarim', 6: 'Estrutural' };
+    const ITEM_TIPOS = [0, 1, 2, 5, 6];
+
+    function openPrazosModal() {
+      document.getElementById('prazos-modal').classList.remove('hidden');
+      renderPrazos();
+    }
+
+    function closePrazosModal() {
+      document.getElementById('prazos-modal').classList.add('hidden');
+    }
+
+    function renderPrazos() {
+      // Index existing process_times by tipo+substatus
+      const ptMap = {};
+      STATE.processTimes.forEach(pt => {
+        ptMap[`${pt.item_tipo}_${pt.substatus_id}`] = pt;
+      });
+
+      const fluxos = {};
+      STATE.substatuses.forEach(s => {
+        const f = s.fluxo || 'Geral';
+        if (!fluxos[f]) fluxos[f] = [];
+        fluxos[f].push(s);
+      });
+
+      let html = `
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
+          <b>Dias Fixo</b> = dias que o processo leva independente da quantidade.<br>
+          <b>Dias/Un</b> = dias adicionais por unidade do item.
+        </p>`;
+
+      ITEM_TIPOS.forEach(tipo => {
+        const tipoNome = ITEM_TIPO_NAMES[tipo];
+        html += `<div style="margin-bottom:20px">
+          <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)">${tipoNome}</div>`;
+
+        for (const [f, subs] of Object.entries(fluxos)) {
+          html += `<div style="font-size:11px;font-weight:700;color:var(--muted);margin:10px 0 4px;text-transform:uppercase">${f}</div>`;
+          html += `<div style="display:flex;flex-direction:column;gap:4px">`;
+          subs.forEach(s => {
+            const key = `${tipo}_${s.id}`;
+            const pt = ptMap[key] || { dias_fixo: 0, dias_por_unidade: 0 };
+            html += `
+              <div style="display:grid;grid-template-columns:1fr 100px 100px;gap:8px;align-items:center">
+                <div style="display:flex;align-items:center;gap:6px;font-size:13px">
+                  <span style="width:8px;height:8px;border-radius:50%;background:${s.cor};flex-shrink:0;display:inline-block"></span>
+                  ${escHtml(s.nome)}
+                </div>
+                <input type="number" min="0" step="0.5"
+                  id="pf_${key}" value="${pt.dias_fixo}"
+                  placeholder="Dias fixo"
+                  style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-size:12px;font-family:inherit;width:100%"/>
+                <input type="number" min="0" step="0.1"
+                  id="pu_${key}" value="${pt.dias_por_unidade}"
+                  placeholder="Dias/un"
+                  style="padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-size:12px;font-family:inherit;width:100%"/>
+              </div>`;
+          });
+          html += `</div>`;
+        }
+        html += `</div>`;
+      });
+
+      // Column headers hint
+      html = `<div style="display:grid;grid-template-columns:1fr 100px 100px;gap:8px;margin-bottom:8px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase">
+        <span>Processo</span><span>Dias Fixo</span><span>Dias/Un</span>
+      </div>` + html;
+
+      document.getElementById('prazos-body').innerHTML = html;
+    }
+
+    async function savePrazos() {
+      const updates = [];
+      ITEM_TIPOS.forEach(tipo => {
+        STATE.substatuses.forEach(s => {
+          const key = `${tipo}_${s.id}`;
+          const fixoEl = document.getElementById(`pf_${key}`);
+          const unEl = document.getElementById(`pu_${key}`);
+          if (!fixoEl || !unEl) return;
+          const dias_fixo = parseFloat(fixoEl.value) || 0;
+          const dias_por_unidade = parseFloat(unEl.value) || 0;
+          if (dias_fixo > 0 || dias_por_unidade > 0) {
+            updates.push({ item_tipo: tipo, substatus_id: s.id, dias_fixo, dias_por_unidade });
+          }
+        });
+      });
+
+      try {
+        await Promise.all(updates.map(u => api('/api/process-times', { method: 'PUT', body: JSON.stringify(u) })));
+        await loadProcessTimes();
+        toast(`${updates.length} prazo(s) salvos!`, 'success');
+        closePrazosModal();
       } catch (err) {
         toast(err.message, 'error');
       }
