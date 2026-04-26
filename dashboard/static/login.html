@@ -209,7 +209,7 @@
       const r = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
       if (r.ok) {
         const me = await r.json();
-        location.replace(me.role === 'ADMIN' ? '/' : '/scanner');
+        location.replace(me.role === 'ADMIN' ? '/fusion' : '/scanner');
       }
     } catch (_) {}
   })();
@@ -232,7 +232,8 @@
         body: JSON.stringify({ username, password }),
       });
 
-      const data = await r.json();
+      let data;
+      try { data = await r.json(); } catch (_) { throw new Error('Erro de servidor — tente novamente'); }
 
       if (!r.ok) {
         throw new Error(data.detail || 'Erro ao autenticar');
@@ -242,7 +243,7 @@
       localStorage.setItem('maxi_username', data.username);
       localStorage.setItem('maxi_role', data.role);
 
-      location.replace(data.role === 'ADMIN' ? '/' : '/scanner');
+      location.replace(data.role === 'ADMIN' ? '/fusion' : '/scanner');
     } catch (err) {
       errEl.textContent = err.message;
       errEl.style.display = 'block';
