@@ -9,6 +9,57 @@ from pathlib import Path
 DB_PATH = Path(__file__).parent / "data" / "maxi.db"
 DATA_PATH = Path(__file__).parent.parent / "pedidos.json"
 
+DEFAULT_PROCESS_TIMES = [
+    # Portas (0) — PROD. PERFIL
+    {"item_tipo": 0, "substatus_id": 1, "dias_fixo": 0.5, "dias_por_unidade": 0.10},  # CORTE
+    {"item_tipo": 0, "substatus_id": 2, "dias_fixo": 1.0, "dias_por_unidade": 0.15},  # USINAGEM
+    {"item_tipo": 0, "substatus_id": 3, "dias_fixo": 2.0, "dias_por_unidade": 0.00},  # AGUARDANDO VIDRO
+    {"item_tipo": 0, "substatus_id": 4, "dias_fixo": 1.0, "dias_por_unidade": 0.20},  # MONTAGEM
+    {"item_tipo": 0, "substatus_id": 5, "dias_fixo": 0.5, "dias_por_unidade": 0.05},  # QUALIDADE
+    {"item_tipo": 0, "substatus_id": 6, "dias_fixo": 0.5, "dias_por_unidade": 0.05},  # EMBALAGEM
+    {"item_tipo": 0, "substatus_id": 7, "dias_fixo": 0.5, "dias_por_unidade": 0.00},  # EXPEDIÇÃO
+    # Vidros (1) — PROD. VIDRO SIMPLES
+    {"item_tipo": 1, "substatus_id": 8,  "dias_fixo": 0.5, "dias_por_unidade": 0.10},  # CORTE
+    {"item_tipo": 1, "substatus_id": 9,  "dias_fixo": 1.0, "dias_por_unidade": 0.15},  # LAPIDAÇÃO
+    {"item_tipo": 1, "substatus_id": 10, "dias_fixo": 0.5, "dias_por_unidade": 0.05},  # LAVAGEM
+    {"item_tipo": 1, "substatus_id": 11, "dias_fixo": 0.5, "dias_por_unidade": 0.05},  # QUALIDADE
+    {"item_tipo": 1, "substatus_id": 12, "dias_fixo": 0.5, "dias_por_unidade": 0.05},  # EMBALAGEM
+    {"item_tipo": 1, "substatus_id": 13, "dias_fixo": 0.5, "dias_por_unidade": 0.00},  # EXPEDIÇÃO
+    # Vidros (1) — PROD. VIDRO COMPLEXO
+    {"item_tipo": 1, "substatus_id": 14, "dias_fixo": 0.5, "dias_por_unidade": 0.10},  # CORTE
+    {"item_tipo": 1, "substatus_id": 15, "dias_fixo": 1.0, "dias_por_unidade": 0.15},  # LAPIDAÇÃO
+    {"item_tipo": 1, "substatus_id": 16, "dias_fixo": 1.5, "dias_por_unidade": 0.20},  # BISOTÊ
+    {"item_tipo": 1, "substatus_id": 17, "dias_fixo": 2.0, "dias_por_unidade": 0.10},  # PINTURA
+    {"item_tipo": 1, "substatus_id": 18, "dias_fixo": 1.5, "dias_por_unidade": 0.15},  # JATO
+    {"item_tipo": 1, "substatus_id": 19, "dias_fixo": 1.0, "dias_por_unidade": 0.20},  # RECORTE/MODELAGEM
+    {"item_tipo": 1, "substatus_id": 20, "dias_fixo": 0.5, "dias_por_unidade": 0.05},  # LAVAGEM
+    {"item_tipo": 1, "substatus_id": 21, "dias_fixo": 1.0, "dias_por_unidade": 0.15},  # MONTAGEM
+    {"item_tipo": 1, "substatus_id": 22, "dias_fixo": 0.5, "dias_por_unidade": 0.05},  # QUALIDADE
+    {"item_tipo": 1, "substatus_id": 23, "dias_fixo": 0.5, "dias_por_unidade": 0.05},  # EMBALAGEM
+    {"item_tipo": 1, "substatus_id": 24, "dias_fixo": 0.5, "dias_por_unidade": 0.00},  # EXPEDIÇÃO
+    # Quadros (2) — PROD. PERFIL
+    {"item_tipo": 2, "substatus_id": 1, "dias_fixo": 0.5, "dias_por_unidade": 0.08},   # CORTE
+    {"item_tipo": 2, "substatus_id": 2, "dias_fixo": 0.5, "dias_por_unidade": 0.10},   # USINAGEM
+    {"item_tipo": 2, "substatus_id": 4, "dias_fixo": 0.5, "dias_por_unidade": 0.15},   # MONTAGEM
+    {"item_tipo": 2, "substatus_id": 5, "dias_fixo": 0.5, "dias_por_unidade": 0.05},   # QUALIDADE
+    {"item_tipo": 2, "substatus_id": 6, "dias_fixo": 0.5, "dias_por_unidade": 0.05},   # EMBALAGEM
+    {"item_tipo": 2, "substatus_id": 7, "dias_fixo": 0.5, "dias_por_unidade": 0.00},   # EXPEDIÇÃO
+    # Camarim (5) — PROD. PERFIL
+    {"item_tipo": 5, "substatus_id": 1, "dias_fixo": 1.0, "dias_por_unidade": 0.15},   # CORTE
+    {"item_tipo": 5, "substatus_id": 2, "dias_fixo": 1.0, "dias_por_unidade": 0.20},   # USINAGEM
+    {"item_tipo": 5, "substatus_id": 4, "dias_fixo": 1.5, "dias_por_unidade": 0.25},   # MONTAGEM
+    {"item_tipo": 5, "substatus_id": 5, "dias_fixo": 0.5, "dias_por_unidade": 0.05},   # QUALIDADE
+    {"item_tipo": 5, "substatus_id": 6, "dias_fixo": 0.5, "dias_por_unidade": 0.05},   # EMBALAGEM
+    {"item_tipo": 5, "substatus_id": 7, "dias_fixo": 0.5, "dias_por_unidade": 0.00},   # EXPEDIÇÃO
+    # Estrutural (6) — PROD. PERFIL
+    {"item_tipo": 6, "substatus_id": 1, "dias_fixo": 0.5, "dias_por_unidade": 0.05},   # CORTE
+    {"item_tipo": 6, "substatus_id": 2, "dias_fixo": 0.5, "dias_por_unidade": 0.08},   # USINAGEM
+    {"item_tipo": 6, "substatus_id": 4, "dias_fixo": 0.5, "dias_por_unidade": 0.10},   # MONTAGEM
+    {"item_tipo": 6, "substatus_id": 5, "dias_fixo": 0.5, "dias_por_unidade": 0.05},   # QUALIDADE
+    {"item_tipo": 6, "substatus_id": 6, "dias_fixo": 0.5, "dias_por_unidade": 0.05},   # EMBALAGEM
+    {"item_tipo": 6, "substatus_id": 7, "dias_fixo": 0.5, "dias_por_unidade": 0.00},   # EXPEDIÇÃO
+]
+
 DEFAULT_SUBSTATUSES = [
     # PROD. PERFIL
     {"id": 1, "fluxo": "PROD. PERFIL", "nome": "1 - CORTE", "cor": "#f59e0b", "ordem": 1},
@@ -153,6 +204,14 @@ def init_db():
                 PRIMARY KEY (item_tipo, substatus_id)
             );
         """)
+
+        # Seed process_times com valores padrão se vazio
+        if conn.execute("SELECT COUNT(*) FROM process_times").fetchone()[0] == 0:
+            conn.executemany(
+                "INSERT OR IGNORE INTO process_times (item_tipo, substatus_id, dias_fixo, dias_por_unidade) "
+                "VALUES (:item_tipo, :substatus_id, :dias_fixo, :dias_por_unidade)",
+                DEFAULT_PROCESS_TIMES
+            )
 
         # Auth tables
         conn.executescript("""
