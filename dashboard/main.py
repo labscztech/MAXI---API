@@ -333,15 +333,36 @@ class ItemSubstatusUpdate(BaseModel):
 
 @app.get("/api/orders/{op}/items")
 async def get_order_items(op: str, _: dict = Depends(get_current_user)):
+    # 1. Itens já persistidos no banco
     items = database.get_order_items(op)
-    if not items:
-        order = database.get_order_by_op(op)
-        if order and order.get("raw_json"):
-            raw_items = maxi_api.extract_items_from_raw(order["raw_json"])
-            if raw_items:
-                database.upsert_order_items(op, raw_items)
-                items = database.get_order_items(op)
-    return items
+    if items:
+        return items
+
+    # 2. Tentar extrair do raw_json existente (só funciona se veio do OP_Dados)
+    order = database.get_order_by_op(op)
+    if order and order.get("raw_json"):
+        raw_items = maxi_api.extract_items_from_raw(order["raw_json"])
+        if raw_items:
+            database.upsert_order_items(op, raw_items)
+            return database.get_order_items(op)
+
+    # 3. Buscar OP completa da API (raw_json do sync de lista não tem itens)
+    try:
+        api_token, empresa = maxi_api.get_api_config()
+        if api_token and empresa:
+            record = await asyncio.get_event_loop().run_in_executor(
+                None, maxi_api.fetch_order_from_api, op, api_token, empresa
+            )
+            if record:
+                database.upsert_single_order(record)
+                raw_items = maxi_api.extract_items_from_raw(record.get("raw_json", ""))
+                if raw_items:
+                    database.upsert_order_items(op, raw_items)
+                    return database.get_order_items(op)
+    except Exception:
+        pass
+
+    return []
 
 
 @app.put("/api/orders/{op}/items/{item_id}/substatus")

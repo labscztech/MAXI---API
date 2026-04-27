@@ -164,9 +164,6 @@ def _parse_api_response(data: dict) -> dict:
     sit_code = _safe_str(cab.get("PEDIDO_SITUACAO"))
     situacao = SITUACAO_MAP.get(sit_code, sit_code)
 
-    # Status P/O
-    status = _safe_str(cab.get("PEDIDO_STATUS"))
-
     # Contar itens por tipo
     qtd = {"qtd_portas": 0, "qtd_vidros": 0, "qtd_quadros": 0, "qtd_camarim": 0, "qtd_estrutural": 0}
     qtd_total = 0
@@ -243,13 +240,14 @@ def extract_items_from_raw(raw_json_str: str) -> list[dict]:
     except Exception:
         return []
 
+    # raw_json armazena data.get("dados", {}) → estrutura: {PEDIDO: {CABECALHO, ITENS}}
     pedido = data.get("PEDIDO", {})
     itens_raw = pedido.get("ITENS", [])
 
     items_list: list = []
     if isinstance(itens_raw, dict) and "ITEM" in itens_raw:
         items_list = itens_raw["ITEM"]
-        if isinstance(items_list, dict):
+        if isinstance(items_list, dict):  # único item vem como dict, não lista
             items_list = [items_list]
     elif isinstance(itens_raw, list):
         items_list = itens_raw
@@ -258,26 +256,33 @@ def extract_items_from_raw(raw_json_str: str) -> list[dict]:
     for i, item in enumerate(items_list):
         if not isinstance(item, dict):
             continue
+
         valores = item.get("ITEM_VALORES", {})
         if not isinstance(valores, dict):
             valores = {}
 
         qty = int(_safe_float(valores.get("ITEM_QUANTIDADE", 0)) or _safe_float(item.get("ITEM_QUANTIDADE", 0)))
 
-        descricao = (
-            _safe_str(item.get("ITEM_DESCRICAO"))
-            or _safe_str(item.get("ITEM_REFERENCIA"))
-            or _safe_str(item.get("ITEM_CODIGO"))
-        )
+        # ITEM_CODIGO = sequência do item no pedido (1, 2, 3…)
+        # ITEM_CODIGO_PRODUTO = código do produto no ERP
+        item_seq = _safe_int(item.get("ITEM_CODIGO", 0)) or (i + 1)
+        descricao = _safe_str(item.get("ITEM_DESCRICAO", ""))
+        codigo_produto = _safe_str(item.get("ITEM_CODIGO_PRODUTO", ""))
+
+        # Dimensões (quando disponíveis — produtos fabricados)
+        largura  = _safe_str(item.get("ITEM_LARGURA", ""))
+        altura   = _safe_str(item.get("ITEM_ALTURA", ""))
+        if largura and altura and largura != "0" and altura != "0":
+            descricao = f"{descricao} ({largura}x{altura}mm)".strip()
 
         result.append({
-            "item_seq": i + 1,
-            "item_tipo": _safe_int(item.get("ITEM_TIPO", 0)),
-            "item_codigo": _safe_str(item.get("ITEM_CODIGO", "")),
+            "item_seq":      item_seq,
+            "item_tipo":     _safe_int(item.get("ITEM_TIPO", 0)),
+            "item_codigo":   codigo_produto,
             "item_descricao": descricao,
-            "quantidade": qty,
-            "valor_total": _safe_str(valores.get("ITEM_VALOR_TOTAL", "")),
-            "raw_json": json.dumps(item, ensure_ascii=False),
+            "quantidade":    qty,
+            "valor_total":   _safe_str(valores.get("ITEM_VALOR_TOTAL", "")),
+            "raw_json":      json.dumps(item, ensure_ascii=False),
         })
 
     return result
